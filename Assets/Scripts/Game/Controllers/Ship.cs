@@ -101,7 +101,7 @@ public class Ship : GravityObject {
 	}
 
 	void TeleportToBody (CelestialBody body) {
-		rb.velocity = body.velocity;
+		rb.linearVelocity = body.velocity;
 		rb.MovePosition (body.transform.position + (transform.position - body.transform.position).normalized * body.radius * 2);
 	}
 
@@ -164,7 +164,7 @@ public class Ship : GravityObject {
 		shipIsPiloted = false;
 		pilot.transform.position = pilotSeatPoint.position;
 		pilot.transform.rotation = pilotSeatPoint.rotation;
-		pilot.Rigidbody.velocity = rb.velocity;
+		pilot.Rigidbody.linearVelocity = rb.linearVelocity;
 		pilot.gameObject.SetActive (true);
 		window.SetActive (true);
 		pilot.ExitFromSpaceship ();
@@ -183,7 +183,7 @@ public class Ship : GravityObject {
 	}
 
 	public void SetVelocity (Vector3 velocity) {
-		rb.velocity = velocity;
+		rb.linearVelocity = velocity;
 	}
 
 	public bool ShowHUD {
