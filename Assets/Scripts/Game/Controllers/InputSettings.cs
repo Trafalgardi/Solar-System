@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 [CreateAssetMenu(menuName = "Settings/Input")]
 public class InputSettings : ScriptableObject
@@ -8,7 +9,7 @@ public class InputSettings : ScriptableObject
 
     public float mouseSensitivity;
     public float mouseSmoothing;
-    public bool lockCursor = true;
+    public bool lockCursor = false;
 
     // TODO: find better place to call this from
     public void Begin()
@@ -17,8 +18,12 @@ public class InputSettings : ScriptableObject
 
         if (lockCursor)
         {
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
+            if (Application.isMobilePlatform) {
+                // Не трогаем курсор на мобиле!
+            } else {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
         }
     }
 

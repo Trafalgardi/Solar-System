@@ -20,6 +20,8 @@ public class Ship : GravityObject
 
     private void Awake()
     {
+        Application.targetFrameRate = 60;
+        
         InitRigidbody();
         targetRot = transform.rotation;
         smoothedRot = transform.rotation;
@@ -51,6 +53,7 @@ public class Ship : GravityObject
     public Rigidbody Rigidbody { get; private set; }
 
     public void ToggleHatch() => HatchOpen = !HatchOpen;
+    
 
     public void TogglePiloting()
     {
@@ -96,16 +99,35 @@ public class Ship : GravityObject
 
     private void HandleMovement()
     {
-        // Thruster input
-        var thrustInputX = GetInputAxis(leftKey, rightKey);
-        var thrustInputY = GetInputAxis(descendKey, ascendKey);
-        var thrustInputZ = GetInputAxis(backwardKey, forwardKey);
-        thrusterInput = new Vector3(thrustInputX, thrustInputY, thrustInputZ);
+        float thrustInputX, thrustInputY, thrustInputZ;
+        float yawInput, pitchInput, rollInput;
 
-        // Rotation input
-        var yawInput = Input.GetAxisRaw(axisName: "Mouse X") * rotSpeed * inputSettings.mouseSensitivity / 100f;
-        var pitchInput = Input.GetAxisRaw(axisName: "Mouse Y") * rotSpeed * inputSettings.mouseSensitivity / 100f;
-        var rollInput = GetInputAxis(rollCounterKey, rollClockwiseKey) * rollSpeed * Time.deltaTime;
+        if (Application.isMobilePlatform)
+        {
+            // Thrusters
+            var move = MobileInput.Instance.moveInput;
+            thrustInputX = move.x;
+            thrustInputZ = move.y;
+            thrustInputY = 0; // можно потом кнопками сделать подъём/спуск
+
+            // Rotation
+            var look = MobileInput.Instance.lookInput;
+            yawInput = look.x * rotSpeed * inputSettings.mouseSensitivity / 10f;
+            pitchInput = look.y * rotSpeed * inputSettings.mouseSensitivity / 10f;
+            rollInput = MobileInput.Instance.rollInput * rollSpeed * Time.deltaTime;
+        }
+        else
+        {
+            thrustInputX = GetInputAxis(leftKey, rightKey);
+            thrustInputY = GetInputAxis(descendKey, ascendKey);
+            thrustInputZ = GetInputAxis(backwardKey, forwardKey);
+
+            yawInput = Input.GetAxisRaw("Mouse X") * rotSpeed * inputSettings.mouseSensitivity / 100f;
+            pitchInput = Input.GetAxisRaw("Mouse Y") * rotSpeed * inputSettings.mouseSensitivity / 100f;
+            rollInput = GetInputAxis(rollCounterKey, rollClockwiseKey) * rollSpeed * Time.deltaTime;
+        }
+
+        thrusterInput = new Vector3(thrustInputX, thrustInputY, thrustInputZ);
 
         // Calculate rotation
         if (numCollisionTouches == 0)
@@ -115,7 +137,6 @@ public class Ship : GravityObject
             var roll = Quaternion.AngleAxis(-rollInput, transform.forward);
 
             targetRot = yaw * pitch * roll * targetRot;
-
             smoothedRot = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotSmoothSpeed);
         }
         else
@@ -124,6 +145,7 @@ public class Ship : GravityObject
             smoothedRot = transform.rotation;
         }
     }
+
 
     private void FixedUpdate()
     {

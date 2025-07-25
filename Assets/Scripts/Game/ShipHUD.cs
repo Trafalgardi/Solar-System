@@ -74,17 +74,17 @@ public class ShipHUD : MonoBehaviour
             {
                 aimedBody = FindAimedBody();
 
-                if (Input.GetMouseButtonDown(button: 0))
-                {
-                    if (LockedBody == aimedBody)
-                    {
-                        LockedBody = null;
-                    }
-                    else
-                    {
-                        LockedBody = aimedBody;
-                    }
-                }
+                // if (Input.GetMouseButtonDown(button: 0))
+                // {
+                //     if (LockedBody == aimedBody)
+                //     {
+                //         LockedBody = null;
+                //     }
+                //     else
+                //     {
+                //         LockedBody = aimedBody;
+                //     }
+                // }
             }
 
             if (aimedBody && aimedBody != LockedBody)

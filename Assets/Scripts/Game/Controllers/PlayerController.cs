@@ -3,7 +3,7 @@
 public class PlayerController : GravityObject
 {
     // Private
-    private Ship spaceship;
+    public Ship spaceship;
 
     private float yaw;
     private float pitch;
@@ -32,11 +32,12 @@ public class PlayerController : GravityObject
     private void Awake()
     {
         Camera = GetComponentInChildren<Camera>();
+        
         cameraLocalPos = Camera.transform.localPosition;
-        spaceship = FindObjectOfType<Ship>();
         InitRigidbody();
-
+        
         animator = GetComponentInChildren<Animator>();
+        
         inputSettings.Begin();
     }
 
@@ -70,6 +71,7 @@ public class PlayerController : GravityObject
     public Rigidbody Rigidbody { get; private set; }
 
     public void SetVelocity(Vector3 velocity) => Rigidbody.linearVelocity = velocity;
+    
 
     public void ExitFromSpaceship()
     {
@@ -90,7 +92,13 @@ public class PlayerController : GravityObject
         Rigidbody.mass = mass;
     }
 
-    private void Update() => HandleMovement();
+    private void Update()
+    {
+        HandleMovement();
+        
+        if (Application.isMobilePlatform)
+            MobileInput.Instance.ClearFrameInputs();
+    }
 
     private void HandleMovement()
     {
@@ -102,12 +110,10 @@ public class PlayerController : GravityObject
         }
 
         // Look input
-        yaw += Input.GetAxisRaw(axisName: "Mouse X") * inputSettings.mouseSensitivity / 10 * mouseSensitivityMultiplier;
-
-        pitch -= Input.GetAxisRaw(axisName: "Mouse Y") *
-                 inputSettings.mouseSensitivity /
-                 10 *
-                 mouseSensitivityMultiplier;
+        float lookX = Application.isMobilePlatform ? MobileInput.Instance.lookInput.x : Input.GetAxisRaw("Mouse X");
+        float lookY = Application.isMobilePlatform ? MobileInput.Instance.lookInput.y : Input.GetAxisRaw("Mouse Y");
+        yaw += lookX * inputSettings.mouseSensitivity / 10 * mouseSensitivityMultiplier;
+        pitch -= lookY * inputSettings.mouseSensitivity / 10 * mouseSensitivityMultiplier;
 
         pitch = Mathf.Clamp(pitch, pitchMinMax.x, pitchMinMax.y);
         var mouseSmoothTime = Mathf.Lerp(a: 0.01f, maxMouseSmoothTime, inputSettings.mouseSmoothing);
@@ -123,37 +129,41 @@ public class PlayerController : GravityObject
 
         // Movement
         var isGrounded = IsGrounded();
-        var input = new Vector3(Input.GetAxisRaw(axisName: "Horizontal"), y: 0, Input.GetAxisRaw(axisName: "Vertical"));
+        Vector3 input = Application.isMobilePlatform
+            ? new Vector3(MobileInput.Instance.moveInput.x, 0, MobileInput.Instance.moveInput.y)
+            : new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
         var running = Input.GetKey(KeyCode.LeftShift);
         targetVelocity = transform.TransformDirection(input.normalized) * (running ? runSpeed : walkSpeed);
 
         smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef,
             isGrounded ? vSmoothTime : airSmoothTime);
 
-        //bool inWater = referenceBody
+        bool jumpPressed = Application.isMobilePlatform ? MobileInput.Instance.jumpPressed : Input.GetKeyDown(KeyCode.Space);
+        bool jetpackHeld = Application.isMobilePlatform ? MobileInput.Instance.jetpackHeld : Input.GetKey(KeyCode.Space);
+
         if (isGrounded)
         {
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (jumpPressed)
             {
                 Rigidbody.AddForce(transform.up * jumpForce, ForceMode.VelocityChange);
                 isGrounded = false;
             }
             else
             {
-                // Apply small downward force to prevent player from bouncing when going down slopes
+                // Apply small downward force to prevent bouncing on slopes
                 Rigidbody.AddForce(-transform.up * stickToGroundForce, ForceMode.VelocityChange);
             }
         }
         else
         {
-            // Press (and hold) spacebar while above ground to engage jetpack
-            if (Input.GetKeyDown(KeyCode.Space))
+            // Start jetpack on jumpPressed (tap), hold with jetpackHeld
+            if (jumpPressed)
             {
                 usingJetpack = true;
             }
         }
 
-        if (usingJetpack && Input.GetKey(KeyCode.Space) && jetpackFuelPercent > 0)
+        if (usingJetpack && jetpackHeld && jetpackFuelPercent > 0)
         {
             lastJetpackUseTime = Time.time;
             jetpackFuelPercent -= Time.deltaTime / jetpackDuration;
@@ -163,6 +173,7 @@ public class PlayerController : GravityObject
         {
             usingJetpack = false;
         }
+
 
         // Refuel jetpack
         if (Time.time - lastJetpackUseTime > jetpackRefuelDelay)
