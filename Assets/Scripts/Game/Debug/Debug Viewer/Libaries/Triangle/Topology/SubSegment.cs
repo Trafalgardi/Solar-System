@@ -5,24 +5,15 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Topology
 {
-    using System;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// The subsegment data structure.
     /// </summary>
     public class SubSegment : ISegment
     {
-        // Hash for dictionary. Will be set by mesh instance.
-        internal int hash;
-
-        internal Osub[] subsegs;
-        internal Vertex[] vertices;
-        internal Otri[] triangles;
-        internal int boundary;
-
         public SubSegment()
         {
             // Four NULL vertices.
@@ -39,58 +30,46 @@ namespace TriangleNet.Topology
             triangles = new Otri[2];
         }
 
-        #region Public properties
-
-        /// <summary>
-        /// Gets the first endpoints vertex id.
-        /// </summary>
-        public int P0
-        {
-            get { return this.vertices[0].id; }
-        }
-
-        /// <summary>
-        /// Gets the seconds endpoints vertex id.
-        /// </summary>
-        public int P1
-        {
-            get { return this.vertices[1].id; }
-        }
-
-        /// <summary>
-        /// Gets the segment boundary mark.
-        /// </summary>
-        public int Label
-        {
-            get { return this.boundary; }
-        }
-
-        #endregion
-
         /// <summary>
         /// Gets the segments endpoint.
         /// </summary>
-        public Vertex GetVertex(int index)
-        {
-            return this.vertices[index]; // TODO: Check range?
-        }
+        public Vertex GetVertex(int index) => vertices[index]; // TODO: Check range?
 
         /// <summary>
         /// Gets an adjoining triangle.
         /// </summary>
         public ITriangle GetTriangle(int index)
-        {
-            return triangles[index].tri.hash == Mesh.DUMMY ? null : triangles[index].tri;
-        }
+            => triangles[index].tri.hash == Mesh.DUMMY ? null : triangles[index].tri;
 
-        public override int GetHashCode()
-        {
-            return this.hash;
-        }
+        public override int GetHashCode() => hash;
 
-        public override string ToString()
-        {
-            return String.Format("SID {0}", hash);
-        }
+        public override string ToString() => string.Format(format: "SID {0}", hash);
+
+        // Hash for dictionary. Will be set by mesh instance.
+        internal int hash;
+
+        internal Osub[] subsegs;
+        internal Vertex[] vertices;
+        internal Otri[] triangles;
+        internal int boundary;
+
+        #region Public properties
+
+        /// <summary>
+        /// Gets the first endpoints vertex id.
+        /// </summary>
+        public int P0 => vertices[0].id;
+
+        /// <summary>
+        /// Gets the seconds endpoints vertex id.
+        /// </summary>
+        public int P1 => vertices[1].id;
+
+        /// <summary>
+        /// Gets the segment boundary mark.
+        /// </summary>
+        public int Label => boundary;
+
+        #endregion
     }
 }

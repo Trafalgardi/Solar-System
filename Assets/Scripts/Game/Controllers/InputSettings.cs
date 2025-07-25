@@ -1,38 +1,37 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-[CreateAssetMenu (menuName = "Settings/Input")]
+[CreateAssetMenu(menuName = "Settings/Input")]
+public class InputSettings : ScriptableObject
+{
+    private const float defaultMouseSensitivity = 100;
+    private const float defaultMouseSmoothing = 0.2f;
 
-public class InputSettings : ScriptableObject {
+    public float mouseSensitivity;
+    public float mouseSmoothing;
+    public bool lockCursor = true;
 
-	const float defaultMouseSensitivity = 100;
-	const float defaultMouseSmoothing = 0.2f;
+    // TODO: find better place to call this from
+    public void Begin()
+    {
+        LoadSettings();
 
-	public float mouseSensitivity;
-	public float mouseSmoothing;
-	public bool lockCursor = true;
+        if (lockCursor)
+        {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+    }
 
-	// TODO: find better place to call this from
-	public void Begin () {
-		LoadSettings ();
+    public void LoadSettings()
+    {
+        PlayerPrefs.GetFloat(nameof(mouseSensitivity), defaultMouseSensitivity);
+        PlayerPrefs.GetFloat(nameof(mouseSmoothing), defaultMouseSmoothing);
+    }
 
-		if (lockCursor) {
-			Cursor.visible = false;
-			Cursor.lockState = CursorLockMode.Locked;
-		}
-	}
-
-	public void LoadSettings () {
-		PlayerPrefs.GetFloat (nameof (mouseSensitivity), defaultMouseSensitivity);
-		PlayerPrefs.GetFloat (nameof (mouseSmoothing), defaultMouseSmoothing);
-
-	}
-
-	public void SaveSettings () {
-		PlayerPrefs.SetFloat (nameof (mouseSensitivity), mouseSensitivity);
-		PlayerPrefs.SetFloat (nameof (mouseSmoothing), mouseSmoothing);
-		PlayerPrefs.Save ();
-	}
-
+    public void SaveSettings()
+    {
+        PlayerPrefs.SetFloat(nameof(mouseSensitivity), mouseSensitivity);
+        PlayerPrefs.SetFloat(nameof(mouseSmoothing), mouseSmoothing);
+        PlayerPrefs.Save();
+    }
 }

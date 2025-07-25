@@ -5,33 +5,32 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.Tools;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Voronoi.Legacy
 {
-    using System;
-    using System.Collections.Generic;
-    using TriangleNet.Topology;
-    using TriangleNet.Geometry;
-    using TriangleNet.Tools;
-
     /// <summary>
     /// The Voronoi Diagram is the dual of a pointset triangulation.
     /// </summary>
-    [Obsolete("Use TriangleNet.Voronoi.StandardVoronoi class instead.")]
+    [Obsolete(message: "Use TriangleNet.Voronoi.StandardVoronoi class instead.")]
     public class SimpleVoronoi : IVoronoi
     {
-        IPredicates predicates = RobustPredicates.Default;
+        private readonly IPredicates predicates = RobustPredicates.Default;
 
-        Mesh mesh;
+        private readonly Mesh mesh;
 
-        Point[] points;
-        Dictionary<int, VoronoiRegion> regions;
+        private Dictionary<int, VoronoiRegion> regions;
 
         // Stores the endpoints of rays of unbounded Voronoi cells
-        Dictionary<int, Point> rayPoints;
-        int rayIndex;
+        private Dictionary<int, Point> rayPoints;
+        private int rayIndex;
 
         // Bounding box of the triangles circumcenters.
-        Rectangle bounds;
+        private Rectangle bounds;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SimpleVoronoi" /> class.
@@ -50,23 +49,14 @@ namespace TriangleNet.Voronoi.Legacy
         /// <summary>
         /// Gets the list of Voronoi vertices.
         /// </summary>
-        public Point[] Points
-        {
-            get { return points; }
-        }
+        public Point[] Points { get; private set; }
 
         /// <summary>
         /// Gets the list of Voronoi regions.
         /// </summary>
-        public ICollection<VoronoiRegion> Regions
-        {
-            get { return regions.Values; }
-        }
+        public ICollection<VoronoiRegion> Regions => regions.Values;
 
-        public IEnumerable<IEdge> Edges
-        {
-            get { return EnumerateEdges(); }
-        }
+        public IEnumerable<IEdge> Edges => EnumerateEdges();
 
         /// <summary>
         /// Gets the Voronoi diagram as raw output data.
@@ -85,8 +75,8 @@ namespace TriangleNet.Voronoi.Legacy
             mesh.MakeVertexMap();
 
             // Allocate space for voronoi diagram
-            this.points = new Point[mesh.triangles.Count + mesh.hullsize];
-            this.regions = new Dictionary<int, VoronoiRegion>(mesh.vertices.Count);
+            Points = new Point[mesh.triangles.Count + mesh.hullsize];
+            regions = new Dictionary<int, VoronoiRegion>(mesh.vertices.Count);
 
             rayPoints = new Dictionary<int, Point>();
             rayIndex = 0;
@@ -114,7 +104,7 @@ namespace TriangleNet.Voronoi.Legacy
 
         private void ComputeCircumCenters()
         {
-            Otri tri = default(Otri);
+            var tri = default(Otri);
             double xi = 0, eta = 0;
             Point pt;
 
@@ -126,12 +116,12 @@ namespace TriangleNet.Voronoi.Legacy
                 pt = predicates.FindCircumcenter(tri.Org(), tri.Dest(), tri.Apex(), ref xi, ref eta);
                 pt.id = item.id;
 
-                points[item.id] = pt;
+                Points[item.id] = pt;
 
                 bounds.Expand(pt);
             }
 
-            double ds = Math.Max(bounds.Width, bounds.Height);
+            var ds = Math.Max(bounds.Width, bounds.Height);
             bounds.Resize(ds / 10, ds / 10);
         }
 
@@ -145,12 +135,12 @@ namespace TriangleNet.Voronoi.Legacy
 
             var vpoints = new List<Point>();
 
-            Otri f = default(Otri);
-            Otri f_init = default(Otri);
-            Otri f_next = default(Otri);
-            Otri f_prev = default(Otri);
+            var f = default(Otri);
+            var f_init = default(Otri);
+            var f_next = default(Otri);
+            var f_prev = default(Otri);
 
-            Osub sub = default(Osub);
+            var sub = default(Osub);
 
             // Call f_init a triangle incident to x
             vertex.tri.Copy(ref f_init);
@@ -176,7 +166,7 @@ namespace TriangleNet.Voronoi.Legacy
             while (f_next.tri.id != Mesh.DUMMY)
             {
                 // Add circumcenter of current triangle
-                vpoints.Add(points[f.tri.id]);
+                vpoints.Add(Points[f.tri.id]);
 
                 region.AddNeighbor(f.tri.id, regions[f.Apex().id]);
 
@@ -184,6 +174,7 @@ namespace TriangleNet.Voronoi.Legacy
                 {
                     // Voronoi cell is complete (bounded case).
                     region.Add(vpoints);
+
                     return;
                 }
 
@@ -204,7 +195,7 @@ namespace TriangleNet.Voronoi.Legacy
             sid = sub.seg.hash;
 
             // Last valid f lies at the boundary. Add the circumcenter.
-            vpoints.Add(points[f.tri.id]);
+            vpoints.Add(Points[f.tri.id]);
             region.AddNeighbor(f.tri.id, regions[f.Apex().id]);
 
             // Check if the intersection with the bounding box has already been computed.
@@ -212,12 +203,14 @@ namespace TriangleNet.Voronoi.Legacy
             {
                 torg = f.Org();
                 tapex = f.Apex();
-                intersection = IntersectionHelper.BoxRayIntersection(bounds, points[f.tri.id], torg.y - tapex.y, tapex.x - torg.x);
+
+                intersection =
+                    IntersectionHelper.BoxRayIntersection(bounds, Points[f.tri.id], torg.y - tapex.y, tapex.x - torg.x);
 
                 // Set the correct id for the vertex
                 intersection.id = n + rayIndex;
 
-                points[n + rayIndex] = intersection;
+                Points[n + rayIndex] = intersection;
                 rayIndex++;
 
                 rayPoints.Add(sid, intersection);
@@ -233,7 +226,7 @@ namespace TriangleNet.Voronoi.Legacy
 
             while (f_prev.tri.id != Mesh.DUMMY)
             {
-                vpoints.Add(points[f_prev.tri.id]);
+                vpoints.Add(Points[f_prev.tri.id]);
                 region.AddNeighbor(f_prev.tri.id, regions[f_prev.Apex().id]);
 
                 f_prev.Copy(ref f);
@@ -250,14 +243,15 @@ namespace TriangleNet.Voronoi.Legacy
                 torg = f.Org();
                 tdest = f.Dest();
 
-                intersection = IntersectionHelper.BoxRayIntersection(bounds, points[f.tri.id], tdest.y - torg.y, torg.x - tdest.x);
+                intersection =
+                    IntersectionHelper.BoxRayIntersection(bounds, Points[f.tri.id], tdest.y - torg.y, torg.x - tdest.x);
 
                 // Set the correct id for the vertex
                 intersection.id = n + rayIndex;
 
                 rayPoints.Add(sid, intersection);
 
-                points[n + rayIndex] = intersection;
+                Points[n + rayIndex] = intersection;
                 rayIndex++;
             }
 
@@ -275,8 +269,9 @@ namespace TriangleNet.Voronoi.Legacy
         {
             // Copy edges
             Point first, last;
-            var edges = new List<IEdge>(this.Regions.Count * 2);
-            foreach (var region in this.Regions)
+            var edges = new List<IEdge>(Regions.Count * 2);
+
+            foreach (var region in Regions)
             {
                 var ve = region.Vertices.GetEnumerator();
 

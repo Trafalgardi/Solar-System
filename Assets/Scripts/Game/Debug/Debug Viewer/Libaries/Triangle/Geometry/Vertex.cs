@@ -5,23 +5,24 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Geometry
 {
-    using System;
-    using TriangleNet.Topology;
-
     /// <summary>
     /// The vertex data structure.
     /// </summary>
     public class Vertex : Point
     {
         public int index;
+
         // Hash for dictionary. Will be set by mesh instance.
         internal int hash;
 
-#if USE_ATTRIBS
+        #if USE_ATTRIBS
         internal double[] attributes;
-#endif
+        #endif
         internal VertexType type;
         internal Otri tri;
 
@@ -29,17 +30,17 @@ namespace TriangleNet.Geometry
         /// Initializes a new instance of the <see cref="Vertex" /> class.
         /// </summary>
         public Vertex()
-            : this(0, 0, 0)
+            : this(x: 0, y: 0, mark: 0)
         {
         }
 
-         /// <summary>
+        /// <summary>
         /// Initializes a new instance of the <see cref="Vertex" /> class.
         /// </summary>
         /// <param name="x">The x coordinate of the vertex.</param>
         /// <param name="y">The y coordinate of the vertex.</param>
         public Vertex(double x, double y)
-            : this(x, y, 0)
+            : this(x, y, mark: 0)
         {
         }
 
@@ -53,10 +54,10 @@ namespace TriangleNet.Geometry
         public Vertex(double x, double y, int mark)
             : base(x, y, mark)
         {
-            this.type = VertexType.InputVertex;
+            type = VertexType.InputVertex;
         }
 
-#if USE_ATTRIBS
+        #if USE_ATTRIBS
         /// <summary>
         /// Initializes a new instance of the <see cref="Vertex" /> class.
         /// </summary>
@@ -72,11 +73,11 @@ namespace TriangleNet.Geometry
                 this.attributes = new double[attribs];
             }
         }
-#endif
+        #endif
 
         #region Public properties
 
-#if USE_ATTRIBS
+        #if USE_ATTRIBS
         /// <summary>
         /// Gets the vertex attributes (may be null).
         /// </summary>
@@ -84,15 +85,12 @@ namespace TriangleNet.Geometry
         {
             get { return this.attributes; }
         }
-#endif
+        #endif
 
         /// <summary>
         /// Gets the vertex type.
         /// </summary>
-        public VertexType Type
-        {
-            get { return this.type; }
-        }
+        public VertexType Type => type;
 
         /// <summary>
         /// Gets the specified coordinate of the vertex.
@@ -113,15 +111,12 @@ namespace TriangleNet.Geometry
                     return y;
                 }
 
-                throw new ArgumentOutOfRangeException("Index must be 0 or 1.");
+                throw new ArgumentOutOfRangeException(paramName: "Index must be 0 or 1.");
             }
         }
 
         #endregion
 
-        public override int GetHashCode()
-        {
-            return this.hash;
-        }
+        public override int GetHashCode() => hash;
     }
 }

@@ -1,22 +1,23 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class CustomImageEffect : MonoBehaviour {
-	
-	public bool active;
-    public Shader shader;
+public class CustomImageEffect : MonoBehaviour
+{
     protected Material material;
 
-    public virtual Material GetMaterial () {
-        if (material == null || material.shader != shader) {
-            material = new Material (shader);
+    public bool active;
+    public Shader shader;
+
+    public virtual Material GetMaterial()
+    {
+        if (material == null || material.shader != shader)
+        {
+            material = new Material(shader);
         }
 
         return material;
     }
 
-    public virtual void Release () {
-
+    public virtual void Release()
+    {
     }
 }

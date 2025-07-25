@@ -1,8 +1,7 @@
-﻿
+﻿using TriangleNet.Topology.DCEL;
+
 namespace TriangleNet.Voronoi
 {
-    using TriangleNet.Topology.DCEL;
-
     public interface IVoronoiFactory
     {
         void Initialize(int vertexCount, int edgeCount, int faceCount);

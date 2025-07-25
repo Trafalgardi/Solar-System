@@ -1,66 +1,86 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 
-public abstract class TextureGenerator : ScriptableObject {
-	public enum TextureSize { u128 = 128, u256 = 256, u512 = 512, u1024 = 1024, u2048 = 2048, u4096 = 4096 }
+public abstract class TextureGenerator : ScriptableObject
+{
+    [SerializeField][HideInInspector] protected RenderTexture renderTexture;
 
-	[Header ("Texture Settings")]
-	public string textureName = "Unnamed";
-	public TextureSize textureSize = TextureSize.u512;
-	public FilterMode filterMode = FilterMode.Bilinear;
-	public GraphicsFormat format = GraphicsFormat.R8G8B8A8_UNorm;
-	public bool useMips = true;
+    [Header(header: "Texture Settings")] public string textureName = "Unnamed";
 
-	[Header ("Compute Settings")]
-	public ComputeShader compute;
-	public int seed;
-	public Vector4 testParams;
+    public TextureSize textureSize = TextureSize.u512;
+    public FilterMode filterMode = FilterMode.Bilinear;
+    public GraphicsFormat format = GraphicsFormat.R8G8B8A8_UNorm;
+    public bool useMips = true;
 
-	[SerializeField, HideInInspector]
-	protected RenderTexture renderTexture;
+    [Header(header: "Compute Settings")] public ComputeShader compute;
 
-	public RenderTexture GenerateTexture () {
-		int resolution = (int) textureSize;
-		CreateTexture (ref renderTexture, resolution, textureName);
+    public int seed;
+    public Vector4 testParams;
 
-		if (compute) {
-			compute.SetVector ("params", testParams);
-			Run ();
+    public RenderTexture GenerateTexture()
+    {
+        var resolution = (int)textureSize;
+        CreateTexture(ref renderTexture, resolution, textureName);
 
-			if (useMips) {
-				renderTexture.GenerateMips ();
-			}
-		}
+        if (compute)
+        {
+            compute.SetVector(name: "params", testParams);
+            Run();
 
-		return renderTexture;
-	}
+            if (useMips)
+            {
+                renderTexture.GenerateMips();
+            }
+        }
 
-	protected abstract void Run ();
+        return renderTexture;
+    }
 
-	void CreateTexture (ref RenderTexture texture, int resolution, string name) {
-		if (texture == null || !texture.IsCreated () || texture.width != resolution || texture.height != resolution || texture.useMipMap != useMips || texture.graphicsFormat != format) {
-			if (texture != null) {
-				texture.Release ();
-			}
-			texture = new RenderTexture (resolution, resolution, 0);
-			texture.graphicsFormat = format;
-			texture.enableRandomWrite = true;
+    protected abstract void Run();
 
-			texture.autoGenerateMips = false;
-			texture.useMipMap = useMips;
-			texture.Create ();
-		}
-		texture.wrapMode = TextureWrapMode.Repeat;
-		texture.filterMode = filterMode;
-		texture.name = name;
-	}
+    private void CreateTexture(ref RenderTexture texture, int resolution, string name)
+    {
+        if (texture == null ||
+            !texture.IsCreated() ||
+            texture.width != resolution ||
+            texture.height != resolution ||
+            texture.useMipMap != useMips ||
+            texture.graphicsFormat != format)
+        {
+            if (texture != null)
+            {
+                texture.Release();
+            }
 
-	void OnDestroy () {
-		if (renderTexture != null) {
-			renderTexture.Release ();
-		}
-	}
+            texture = new RenderTexture(resolution, resolution, depth: 0);
+            texture.graphicsFormat = format;
+            texture.enableRandomWrite = true;
 
+            texture.autoGenerateMips = false;
+            texture.useMipMap = useMips;
+            texture.Create();
+        }
+
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = filterMode;
+        texture.name = name;
+    }
+
+    private void OnDestroy()
+    {
+        if (renderTexture != null)
+        {
+            renderTexture.Release();
+        }
+    }
+
+    public enum TextureSize
+    {
+        u128 = 128,
+        u256 = 256,
+        u512 = 512,
+        u1024 = 1024,
+        u2048 = 2048,
+        u4096 = 4096,
+    }
 }

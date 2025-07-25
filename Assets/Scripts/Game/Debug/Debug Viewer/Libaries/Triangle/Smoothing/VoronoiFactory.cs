@@ -1,21 +1,20 @@
-﻿
+﻿using System;
+using TriangleNet.Topology.DCEL;
+using TriangleNet.Voronoi;
+
 namespace TriangleNet.Smoothing
 {
-    using System;
-    using TriangleNet.Topology.DCEL;
-    using TriangleNet.Voronoi;
-
     /// <summary>
     /// Factory which re-uses objects in the smoothing loop to enhance performance.
     /// </summary>
     /// <remarks>
     /// See <see cref="SimpleSmoother"/>.
     /// </remarks>
-    class VoronoiFactory : IVoronoiFactory
+    internal class VoronoiFactory : IVoronoiFactory
     {
-        ObjectPool<Vertex> vertices;
-        ObjectPool<HalfEdge> edges;
-        ObjectPool<Face> faces;
+        private readonly ObjectPool<Vertex> vertices;
+        private readonly ObjectPool<HalfEdge> edges;
+        private readonly ObjectPool<Face> faces;
 
         public VoronoiFactory()
         {
@@ -30,20 +29,20 @@ namespace TriangleNet.Smoothing
             edges.Capacity = edgeCount;
             faces.Capacity = faceCount;
 
-            for (int i = vertices.Count; i < vertexCount; i++)
+            for (var i = vertices.Count; i < vertexCount; i++)
             {
-                vertices.Put(new Vertex(0, 0));
+                vertices.Put(new Vertex(x: 0, y: 0));
             }
 
 
-            for (int i = edges.Count; i < edgeCount; i++)
+            for (var i = edges.Count; i < edgeCount; i++)
             {
-                edges.Put(new HalfEdge(null));
+                edges.Put(new HalfEdge(origin: null));
             }
 
-            for (int i = faces.Count; i < faceCount; i++)
+            for (var i = faces.Count; i < faceCount; i++)
             {
-                faces.Put(new Face(null));
+                faces.Put(new Face(generator: null));
             }
 
             Reset();
@@ -122,45 +121,42 @@ namespace TriangleNet.Smoothing
             return face;
         }
 
-        class ObjectPool<T> where T : class
+        private class ObjectPool<T> where T : class
         {
-            int index, count;
+            private int index;
 
-            T[] pool;
-
-            public int Count
-            {
-                get { return count; }
-            }
-
-
-            public int Capacity
-            {
-                get { return this.pool.Length; }
-                set { Resize(value); }
-            }
+            private T[] pool;
 
             public ObjectPool(int capacity = 3)
             {
-                this.index = 0;
-                this.count = 0;
+                index = 0;
+                Count = 0;
 
-                this.pool = new T[capacity];
+                pool = new T[capacity];
             }
 
             public ObjectPool(T[] pool)
             {
-                this.index = 0;
-                this.count = 0;
+                index = 0;
+                Count = 0;
 
                 this.pool = pool;
             }
 
+            public int Count { get; private set; }
+
+
+            public int Capacity
+            {
+                get => pool.Length;
+                set => Resize(value);
+            }
+
             public bool TryGet(out T obj)
             {
-                if (this.index < this.count)
+                if (index < Count)
                 {
-                    obj = this.pool[this.index++];
+                    obj = pool[index++];
 
                     return true;
                 }
@@ -172,28 +168,25 @@ namespace TriangleNet.Smoothing
 
             public void Put(T obj)
             {
-                var capacity = this.pool.Length;
+                var capacity = pool.Length;
 
-                if (capacity <= this.count)
+                if (capacity <= Count)
                 {
                     Resize(2 * capacity);
                 }
 
-                this.pool[this.count++] = obj;
+                pool[Count++] = obj;
 
-                this.index++;
+                index++;
             }
 
-            public void Release()
-            {
-                this.index = 0;
-            }
+            public void Release() => index = 0;
 
             private void Resize(int size)
             {
-                if (size > this.count)
+                if (size > Count)
                 {
-                    Array.Resize(ref this.pool, size);
+                    Array.Resize(ref pool, size);
                 }
             }
         }

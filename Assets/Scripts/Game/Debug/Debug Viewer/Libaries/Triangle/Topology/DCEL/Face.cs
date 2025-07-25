@@ -4,68 +4,22 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Topology.DCEL
 {
-    using System.Collections.Generic;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// A face of DCEL mesh.
     /// </summary>
     public class Face
     {
-        #region Static initialization of "Outer Space" face
-
-        public static readonly Face Empty;
-
-        static Face()
-        {
-            Empty = new Face(null);
-            Empty.id = -1;
-        }
-
-        #endregion
-
-        internal int id;
-
-        internal Point generator;
-
-        internal HalfEdge edge;
-        internal bool bounded;
-
-        /// <summary>
-        /// Gets or sets the face id.
-        /// </summary>
-        public int ID
-        {
-            get { return id; }
-            set { id = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets a half-edge connected to the face.
-        /// </summary>
-        public HalfEdge Edge
-        {
-            get { return edge; }
-            set { edge = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets a value, indicating if the face is bounded (for Voronoi diagram).
-        /// </summary>
-        public bool Bounded
-        {
-            get { return bounded; }
-            set { bounded = value; }
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="Face" /> class.
         /// </summary>
         /// <param name="generator">The generator of this face (for Voronoi diagram)</param>
         public Face(Point generator)
-            : this(generator, null)
+            : this(generator, edge: null)
         {
         }
 
@@ -78,12 +32,39 @@ namespace TriangleNet.Topology.DCEL
         {
             this.generator = generator;
             this.edge = edge;
-            this.bounded = true;
+            bounded = true;
 
             if (generator != null)
             {
-                this.id = generator.ID;
+                id = generator.ID;
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the face id.
+        /// </summary>
+        public int ID
+        {
+            get => id;
+            set => id = value;
+        }
+
+        /// <summary>
+        /// Gets or sets a half-edge connected to the face.
+        /// </summary>
+        public HalfEdge Edge
+        {
+            get => edge;
+            set => edge = value;
+        }
+
+        /// <summary>
+        /// Gets or sets a value, indicating if the face is bounded (for Voronoi diagram).
+        /// </summary>
+        public bool Bounded
+        {
+            get => bounded;
+            set => bounded = value;
         }
 
         /// <summary>
@@ -92,8 +73,8 @@ namespace TriangleNet.Topology.DCEL
         /// <returns></returns>
         public IEnumerable<HalfEdge> EnumerateEdges()
         {
-            var edge = this.Edge;
-            int first = edge.ID;
+            var edge = Edge;
+            var first = edge.ID;
 
             do
             {
@@ -103,9 +84,25 @@ namespace TriangleNet.Topology.DCEL
             } while (edge.ID != first);
         }
 
-        public override string ToString()
+        public override string ToString() => string.Format(format: "F-ID {0}", id);
+
+        internal int id;
+
+        internal Point generator;
+
+        internal HalfEdge edge;
+        internal bool bounded;
+
+        #region Static initialization of "Outer Space" face
+
+        public static readonly Face Empty;
+
+        static Face()
         {
-            return string.Format("F-ID {0}", id);
+            Empty = new Face(generator: null);
+            Empty.id = -1;
         }
+
+        #endregion
     }
 }

@@ -1,38 +1,41 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class OceanEffect {
+public class OceanEffect
+{
+    private Light light;
+    protected Material material;
 
-	Light light;
-	protected Material material;
+    public void UpdateSettings(CelestialBodyGenerator generator, Shader shader)
+    {
+        if (material == null || material.shader != shader)
+        {
+            material = new Material(shader);
+        }
 
-	public void UpdateSettings (CelestialBodyGenerator generator, Shader shader) {
-		if (material == null || material.shader != shader) {
-			material = new Material (shader);
-		}
+        if (light == null)
+        {
+            light = GameObject.FindObjectOfType<SunShadowCaster>()?.GetComponent<Light>();
+        }
 
-		if (light == null) {
-			light = GameObject.FindObjectOfType<SunShadowCaster> ()?.GetComponent<Light> ();
-		}
+        var centre = generator.transform.position;
+        var radius = generator.GetOceanRadius();
+        material.SetVector(name: "oceanCentre", centre);
+        material.SetFloat(name: "oceanRadius", radius);
 
-		Vector3 centre = generator.transform.position;
-		float radius = generator.GetOceanRadius ();
-		material.SetVector ("oceanCentre", centre);
-		material.SetFloat ("oceanRadius", radius);
+        material.SetFloat(name: "planetScale", generator.BodyScale);
 
-		material.SetFloat ("planetScale", generator.BodyScale);
-		if (light) {
-			material.SetVector ("dirToSun", -light.transform.forward);
-		} else {
-			material.SetVector ("dirToSun", Vector3.up);
-			Debug.Log ("No SunShadowCaster found");
-		}
-		generator.body.shading.SetOceanProperties (material);
-	}
+        if (light)
+        {
+            material.SetVector(name: "dirToSun", -light.transform.forward);
+        }
+        else
+        {
+            material.SetVector(name: "dirToSun", Vector3.up);
+            Debug.Log(message: "No SunShadowCaster found");
+        }
 
-	public Material GetMaterial () {
-		return material;
-	}
+        generator.body.shading.SetOceanProperties(material);
+    }
 
+    public Material GetMaterial() => material;
 }

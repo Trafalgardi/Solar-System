@@ -4,10 +4,10 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Tools
 {
-    using TriangleNet.Geometry;
-
     public static class IntersectionHelper
     {
         /// <summary>
@@ -24,15 +24,15 @@ namespace TriangleNet.Tools
         /// </remarks>
         public static void IntersectSegments(Point p0, Point p1, Point q0, Point q1, ref Point c0)
         {
-            double ux = p1.x - p0.x;
-            double uy = p1.y - p0.y;
-            double vx = q1.x - q0.x;
-            double vy = q1.y - q0.y;
-            double wx = p0.x - q0.x;
-            double wy = p0.y - q0.y;
+            var ux = p1.x - p0.x;
+            var uy = p1.y - p0.y;
+            var vx = q1.x - q0.x;
+            var vy = q1.y - q0.y;
+            var wx = p0.x - q0.x;
+            var wy = p0.y - q0.y;
 
-            double d = (ux * vy - uy * vx);
-            double s = (vx * wy - vy * wx) / d;
+            var d = ux * vy - uy * vx;
+            var s = (vx * wy - vy * wx) / d;
 
             // Intersection point
             c0.x = p0.X + s * ux;
@@ -55,43 +55,82 @@ namespace TriangleNet.Tools
         public static bool LiangBarsky(Rectangle rect, Point p0, Point p1, ref Point c0, ref Point c1)
         {
             // Define the x/y clipping values for the border.
-            double xmin = rect.Left;
-            double xmax = rect.Right;
-            double ymin = rect.Bottom;
-            double ymax = rect.Top;
+            var xmin = rect.Left;
+            var xmax = rect.Right;
+            var ymin = rect.Bottom;
+            var ymax = rect.Top;
 
             // Define the start and end points of the line.
-            double x0 = p0.X;
-            double y0 = p0.Y;
-            double x1 = p1.X;
-            double y1 = p1.Y;
+            var x0 = p0.X;
+            var y0 = p0.Y;
+            var x1 = p1.X;
+            var y1 = p1.Y;
 
-            double t0 = 0.0;
-            double t1 = 1.0;
+            var t0 = 0.0;
+            var t1 = 1.0;
 
-            double dx = x1 - x0;
-            double dy = y1 - y0;
+            var dx = x1 - x0;
+            var dy = y1 - y0;
 
             double p = 0.0, q = 0.0, r;
 
-            for (int edge = 0; edge < 4; edge++)
+            for (var edge = 0; edge < 4; edge++)
             {
                 // Traverse through left, right, bottom, top edges.
-                if (edge == 0) { p = -dx; q = -(xmin - x0); }
-                if (edge == 1) { p = dx; q = (xmax - x0); }
-                if (edge == 2) { p = -dy; q = -(ymin - y0); }
-                if (edge == 3) { p = dy; q = (ymax - y0); }
+                if (edge == 0)
+                {
+                    p = -dx;
+                    q = -(xmin - x0);
+                }
+
+                if (edge == 1)
+                {
+                    p = dx;
+                    q = xmax - x0;
+                }
+
+                if (edge == 2)
+                {
+                    p = -dy;
+                    q = -(ymin - y0);
+                }
+
+                if (edge == 3)
+                {
+                    p = dy;
+                    q = ymax - y0;
+                }
+
                 r = q / p;
-                if (p == 0 && q < 0) return false; // Don't draw line at all. (parallel line outside)
+
+                if (p == 0 && q < 0)
+                {
+                    return false; // Don't draw line at all. (parallel line outside)
+                }
+
                 if (p < 0)
                 {
-                    if (r > t1) return false; // Don't draw line at all.
-                    else if (r > t0) t0 = r; // Line is clipped!
+                    if (r > t1)
+                    {
+                        return false; // Don't draw line at all.
+                    }
+
+                    if (r > t0)
+                    {
+                        t0 = r; // Line is clipped!
+                    }
                 }
                 else if (p > 0)
                 {
-                    if (r < t0) return false; // Don't draw line at all.
-                    else if (r < t1) t1 = r; // Line is clipped!
+                    if (r < t0)
+                    {
+                        return false; // Don't draw line at all.
+                    }
+
+                    if (r < t1)
+                    {
+                        t1 = r; // Line is clipped!
+                    }
                 }
             }
 
@@ -112,9 +151,7 @@ namespace TriangleNet.Tools
         /// <param name="c1">The intersection point.</param>
         /// <returns>Returns false, if startpoint is outside the box.</returns>
         public static bool BoxRayIntersection(Rectangle rect, Point p0, Point p1, ref Point c1)
-        {
-            return BoxRayIntersection(rect, p0, p1.x - p0.x, p1.y - p0.y, ref c1);
-        }
+            => BoxRayIntersection(rect, p0, p1.x - p0.x, p1.y - p0.y, ref c1);
 
         /// <summary>
         /// Intersect a ray with a bounding box.
@@ -147,16 +184,16 @@ namespace TriangleNet.Tools
         /// <returns>Returns false, if startpoint is outside the box.</returns>
         public static bool BoxRayIntersection(Rectangle rect, Point p, double dx, double dy, ref Point c)
         {
-            double x = p.X;
-            double y = p.Y;
+            var x = p.X;
+            var y = p.Y;
 
             double t1, x1, y1, t2, x2, y2;
 
             // Bounding box
-            double xmin = rect.Left;
-            double xmax = rect.Right;
-            double ymin = rect.Bottom;
-            double ymax = rect.Top;
+            var xmin = rect.Left;
+            var xmax = rect.Right;
+            var ymin = rect.Bottom;
+            var ymax = rect.Top;
 
             // Check if point is inside the bounds
             if (x < xmin || x > xmax || y < ymin || y > ymax)

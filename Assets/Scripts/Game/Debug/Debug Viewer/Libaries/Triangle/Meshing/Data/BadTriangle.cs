@@ -5,12 +5,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Meshing.Data
 {
-    using System;
-    using TriangleNet.Geometry;
-    using TriangleNet.Topology;
-
     /// <summary>
     /// A queue used to store bad triangles.
     /// </summary>
@@ -19,16 +18,13 @@ namespace TriangleNet.Meshing.Data
     /// Each triangle's vertices are stored so that one can check whether a
     /// triangle is still the same.
     /// </remarks>
-    class BadTriangle
+    internal class BadTriangle
     {
-        public Otri poortri; // A skinny or too-large triangle.
-        public double key; // cos^2 of smallest (apical) angle.
+        public Otri poortri;           // A skinny or too-large triangle.
+        public double key;             // cos^2 of smallest (apical) angle.
         public Vertex org, dest, apex; // Its three vertices.
-        public BadTriangle next; // Pointer to next bad triangle.
+        public BadTriangle next;       // Pointer to next bad triangle.
 
-        public override string ToString()
-        {
-            return String.Format("B-TID {0}", poortri.tri.hash);
-        }
+        public override string ToString() => string.Format(format: "B-TID {0}", poortri.tri.hash);
     }
 }

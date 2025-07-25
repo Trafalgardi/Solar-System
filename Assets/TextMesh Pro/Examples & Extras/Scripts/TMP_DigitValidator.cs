@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-using System;
-
+﻿using System;
 
 namespace TMPro
 {
@@ -18,6 +16,7 @@ namespace TMPro
             {
                 text += ch;
                 pos += 1;
+
                 return ch;
             }
 

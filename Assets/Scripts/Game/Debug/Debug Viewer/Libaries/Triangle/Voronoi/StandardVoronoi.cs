@@ -4,13 +4,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+using TriangleNet.Tools;
+
 namespace TriangleNet.Voronoi
 {
-    using System.Collections.Generic;
-    using TriangleNet.Geometry;
-    using TriangleNet.Tools;
-    using TriangleNet.Topology.DCEL;
-
     public class StandardVoronoi : VoronoiBase
     {
         public StandardVoronoi(Mesh mesh)
@@ -24,7 +22,7 @@ namespace TriangleNet.Voronoi
         }
 
         public StandardVoronoi(Mesh mesh, Rectangle box, IVoronoiFactory factory, IPredicates predicates)
-            : base(mesh, factory, predicates, true)
+            : base(mesh, factory, predicates, generate: true)
         {
             // We assume the box to be at least as large as the mesh.
             box.Expand(mesh.bounds);
@@ -50,16 +48,12 @@ namespace TriangleNet.Voronoi
                     // Move infinite vertex v2 onto the box boundary.
                     IntersectionHelper.BoxRayIntersection(box, v1, v2, ref v2);
                 }
-                else
-                {
-                    // There is actually no easy way to handle the second case. The two edges
-                    // leaving v1, pointing towards the mesh, don't have to intersect the box
-                    // (the could join with edges of other cells outside the box).
-
-                    // A general intersection algorithm (DCEL <-> Rectangle) is needed, which
-                    // computes intersections with all edges and discards objects outside the
-                    // box.
-                }
+                // There is actually no easy way to handle the second case. The two edges
+                // leaving v1, pointing towards the mesh, don't have to intersect the box
+                // (the could join with edges of other cells outside the box).
+                // A general intersection algorithm (DCEL <-> Rectangle) is needed, which
+                // computes intersections with all edges and discards objects outside the
+                // box.
             }
         }
     }

@@ -1,5 +1,4 @@
-﻿
-namespace TriangleNet.Meshing
+﻿namespace TriangleNet.Meshing
 {
     /// <summary>
     /// Mesh constraint options for polygon triangulation.
@@ -11,7 +10,7 @@ namespace TriangleNet.Meshing
         /// <summary>
         /// Gets or sets a value indicating whether to use regions.
         /// </summary>
-        [System.Obsolete("Not used anywhere, will be removed in beta 4.")]
+        [System.Obsolete(message: "Not used anywhere, will be removed in beta 4.")]
         public bool UseRegions { get; set; }
 
         /// <summary>

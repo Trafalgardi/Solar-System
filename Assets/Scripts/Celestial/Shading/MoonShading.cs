@@ -1,277 +1,325 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu (menuName = "Celestial Body/Moon/Moon Shading")]
-public class MoonShading : CelestialBodyShading {
+[CreateAssetMenu(menuName = "Celestial Body/Moon/Moon Shading")]
+public class MoonShading : CelestialBodyShading
+{
+    private ComputeBuffer craterBuffer;
+    private ComputeBuffer pointBuffer;
+    private MoonShape moonShape;
 
-	public Color primaryColA = Color.white;
-	public Color secondaryColA = Color.black;
-	public Color primaryColB = Color.white;
-	public Color secondaryColB = Color.black;
-	public Color steepCol = Color.black;
+    public Color primaryColA = Color.white;
+    public Color secondaryColA = Color.black;
+    public Color primaryColB = Color.white;
+    public Color secondaryColB = Color.black;
+    public Color steepCol = Color.black;
 
-	[Header ("Shading Data")]
-	public int numBiomePoints = 20;
-	public Vector2 radiusMinMax = new Vector2 (0.02f, 0.1f);
+    [Header(header: "Shading Data")] public int numBiomePoints = 20;
 
-	public SimpleNoiseSettings biomeWarpNoise;
-	public SimpleNoiseSettings detailNoise;
-	public SimpleNoiseSettings detailWarpNoise;
+    public Vector2 radiusMinMax = new(x: 0.02f, y: 0.1f);
 
-	[Header ("Rays")]
-	[Range (0, 1)]
-	public float candidatePoolSize = 0.2f;
-	public int desiredNumCraterRays = 2;
-	public int ejectaRaySeed;
-	public float ejectaRaysScale = 10;
+    public SimpleNoiseSettings biomeWarpNoise;
+    public SimpleNoiseSettings detailNoise;
+    public SimpleNoiseSettings detailWarpNoise;
 
-	[Header ("Normal maps")]
-	public Texture2D[] normalMapsFlat;
-	public Texture2D[] normalMapsSteep;
+    [Header(header: "Rays")]
+    [Range(min: 0, max: 1)]
+    public float candidatePoolSize = 0.2f;
 
-	ComputeBuffer craterBuffer;
-	ComputeBuffer pointBuffer;
-	MoonShape moonShape;
+    public int desiredNumCraterRays = 2;
+    public int ejectaRaySeed;
+    public float ejectaRaysScale = 10;
 
-	public override void Initialize (CelestialBodyShape shape) {
-		base.Initialize (shape);
-		moonShape = shape as MoonShape;
-	}
+    [Header(header: "Normal maps")] public Texture2D[] normalMapsFlat;
 
-	public override void SetTerrainProperties (Material material, Vector2 heightMinMax, float bodyScale) {
-		material.SetVector ("heightMinMax", heightMinMax);
-		material.SetFloat ("bodyScale", bodyScale);
+    public Texture2D[] normalMapsSteep;
 
-		var prng = new PRNG (seed);
+    public override void Initialize(CelestialBodyShape shape)
+    {
+        base.Initialize(shape);
+        moonShape = shape as MoonShape;
+    }
 
-		if (randomize) {
+    public override void SetTerrainProperties(Material material, Vector2 heightMinMax, float bodyScale)
+    {
+        material.SetVector(name: "heightMinMax", heightMinMax);
+        material.SetFloat(name: "bodyScale", bodyScale);
 
-			SetColours (prng, material);
+        var prng = new PRNG(seed);
 
-			material.SetFloat ("_SmoothnessA", Mathf.Lerp (0f, 0.6f, prng.SmallestRandom01 (4)));
-			material.SetFloat ("_SmoothnessB", Mathf.Lerp (0f, 0.6f, prng.SmallestRandom01 (4)));
-			material.SetFloat ("_Metallic", Mathf.Lerp (0f, 0.5f, prng.SmallestRandom01 (3)));
+        if (randomize)
+        {
+            SetColours(prng, material);
 
-			var randomNormalMapFlat = prng.RandomElement (normalMapsFlat);
-			var randomNormalMapSteep = randomNormalMapFlat;
-			int loopSafety = 0;
-			while (randomNormalMapSteep == randomNormalMapFlat && loopSafety < 20) {
-				randomNormalMapSteep = prng.RandomElement (normalMapsSteep);
-				loopSafety++;
-			}
-			material.SetTexture ("_NormalMapFlat", randomNormalMapFlat);
-			material.SetTexture ("_NormalMapSteep", randomNormalMapSteep);
+            material.SetFloat(name: "_SmoothnessA", Mathf.Lerp(a: 0f, b: 0.6f, prng.SmallestRandom01(n: 4)));
+            material.SetFloat(name: "_SmoothnessB", Mathf.Lerp(a: 0f, b: 0.6f, prng.SmallestRandom01(n: 4)));
+            material.SetFloat(name: "_Metallic", Mathf.Lerp(a: 0f, b: 0.5f, prng.SmallestRandom01(n: 3)));
 
-			SetBiomeSettings (prng, material);
+            var randomNormalMapFlat = prng.RandomElement(normalMapsFlat);
+            var randomNormalMapSteep = randomNormalMapFlat;
+            var loopSafety = 0;
 
-		} else {
-			material.SetColor ("_PrimaryColA", primaryColA);
-			material.SetColor ("_SecondaryColA", secondaryColA);
-			material.SetColor ("_PrimaryColB", primaryColB);
-			material.SetColor ("_SecondaryColB", secondaryColB);
-			material.SetColor ("_SteepCol", steepCol);
-		}
+            while (randomNormalMapSteep == randomNormalMapFlat && loopSafety < 20)
+            {
+                randomNormalMapSteep = prng.RandomElement(normalMapsSteep);
+                loopSafety++;
+            }
 
-		//
-		if (cachedShadingData != null) {
-			float biomeNoiseSum = 0;
-			for (int i = 0; i < cachedShadingData.Length; i++) {
-				biomeNoiseSum += cachedShadingData[i].w;
-			}
-			material.SetFloat ("_AvgBiomeNoiseDst", biomeNoiseSum / cachedShadingData.Length);
-		} else {
-			Debug.LogError ("Cached shading noise null");
-			material.SetFloat ("_AvgBiomeNoiseDst", 5);
-		}
+            material.SetTexture(name: "_NormalMapFlat", randomNormalMapFlat);
+            material.SetTexture(name: "_NormalMapSteep", randomNormalMapSteep);
 
-	}
+            SetBiomeSettings(prng, material);
+        }
+        else
+        {
+            material.SetColor(name: "_PrimaryColA", primaryColA);
+            material.SetColor(name: "_SecondaryColA", secondaryColA);
+            material.SetColor(name: "_PrimaryColB", primaryColB);
+            material.SetColor(name: "_SecondaryColB", secondaryColB);
+            material.SetColor(name: "_SteepCol", steepCol);
+        }
 
-	void SetBiomeSettings (PRNG prng, Material material) {
-		var biomeValues = new Vector4 (
-			prng.SignedValueBiasExtremes (0.3f),
-			prng.SignedValueBiasExtremes (0.3f) * 0.4f,
-			prng.SignedValueBiasExtremes (0.3f) * 0.3f,
-			prng.SignedValueBiasCentre (0.3f) * .7f
-		);
-		material.SetVector ("_RandomBiomeValues", biomeValues);
-		float warpStrength = prng.SignedValueBiasCentre (.65f) * 30;
-		material.SetFloat ("_BiomeBlendStrength", prng.Range (2f, 12) + Mathf.Abs (warpStrength) / 2);
-		material.SetFloat ("_BiomeWarpStrength", warpStrength);
-	}
+        //
+        if (cachedShadingData != null)
+        {
+            float biomeNoiseSum = 0;
 
-	void SetColours (PRNG rand, Material material) {
+            for (var i = 0; i < cachedShadingData.Length; i++)
+            {
+                biomeNoiseSum += cachedShadingData[i].w;
+            }
 
-		var colChance = new Chance (rand);
-		var primaryA_HSV = Vector3.zero;
-		var secondaryA_HSV = Vector3.zero;
-		var primaryB_HSV = Vector3.zero;
-		var secondaryB_HSV = Vector3.zero;
+            material.SetFloat(name: "_AvgBiomeNoiseDst", biomeNoiseSum / cachedShadingData.Length);
+        }
+        else
+        {
+            Debug.LogError(message: "Cached shading noise null");
+            material.SetFloat(name: "_AvgBiomeNoiseDst", value: 5);
+        }
+    }
 
-		// One light grey, one dark grey
-		if (colChance.Percent (25)) {
-			primaryA_HSV = new Vector3 (0, 0, Mathf.Lerp (0.55f, 1, rand.ValueBiasUpper (.4f)));
-			secondaryA_HSV = primaryA_HSV + new Vector3 (0, 0, rand.SignedValueBiasCentre (0.4f));
-			primaryB_HSV = new Vector3 (0, 0, Mathf.Lerp (0f, 0.45f, rand.ValueBiasLower (.4f)));
-			secondaryB_HSV = primaryB_HSV + new Vector3 (0, 0, rand.SignedValueBiasCentre (0.4f));
-		}
-		// One colour, one grey
-		else if (colChance.Percent (25)) {
-			// Pick grey, tending towards either very dark or very light
-			float greyValue = rand.ValueBiasExtremes (0.8f);
-			primaryA_HSV = new Vector3 (0, 0, greyValue);
-			secondaryA_HSV = new Vector3 (0, 0, greyValue + rand.SignedValueBiasCentre (0.5f) * .3f);
-			// If grey is dark, use bright colour, otherwise dark colour
-			float colourValue = (greyValue < 0.5f) ? rand.ValueBiasUpper (0.7f) : rand.ValueBiasLower (0.7f);
-			primaryB_HSV = new Vector3 (rand.Value (), rand.Range (0.2f, 0.9f), Mathf.Lerp (0.1f, 0.9f, colourValue));
-			secondaryB_HSV = primaryB_HSV + rand.JiggleVector3 (0.1f, 0.2f, 0.4f);
-		}
+    public override void ReleaseBuffers()
+    {
+        base.ReleaseBuffers();
+        ComputeHelper.Release(craterBuffer, pointBuffer);
+    }
 
-		// Two similar colours
-		else if (colChance.Percent (25)) {
-			primaryA_HSV = new Vector3 (rand.Range (0, 1), rand.Range (0.1f, 0.8f), rand.Range (0.2f, 0.8f));
-			secondaryA_HSV = primaryA_HSV + rand.JiggleVector3 (0.1f, 0.2f, 0.3f);
-			primaryB_HSV = new Vector3 (primaryA_HSV.x + rand.Range (0.05f, 0.1f), rand.Range (0.1f, 0.8f), rand.Range (0.2f, 0.8f));
-			secondaryB_HSV = primaryB_HSV + rand.JiggleVector3 (0.1f, 0.2f, 0.3f);
-		}
+    protected override void SetShadingDataComputeProperties()
+    {
+        SetCraters(moonShape);
+        SetRandomPoints();
+        SetShadingNoise();
+    }
 
-		// Two distinct colours
-		else if (colChance.Percent (25)) {
-			primaryA_HSV = new Vector3 (rand.Value (), rand.Range (0.2f, 0.9f), rand.Range (0.1f, 0.9f));
-			secondaryA_HSV = primaryA_HSV + rand.JiggleVector3 (0.1f, 0.2f, 0.3f);
-			primaryB_HSV = new Vector3 ((primaryA_HSV.x + rand.Range (0.2f, 0.8f)) % 1, rand.Range (0.2f, 0.9f), rand.Range (0.1f, 0.9f));
-			secondaryB_HSV = primaryB_HSV + rand.JiggleVector3 (0.1f, 0.2f, 0.3f);
+    protected override void OnValidate() => base.OnValidate();
 
-		}
+    private void SetBiomeSettings(PRNG prng, Material material)
+    {
+        var biomeValues = new Vector4(prng.SignedValueBiasExtremes(biasStrength: 0.3f),
+            prng.SignedValueBiasExtremes(biasStrength: 0.3f) * 0.4f,
+            prng.SignedValueBiasExtremes(biasStrength: 0.3f) * 0.3f,
+            prng.SignedValueBiasCentre(biasStrength: 0.3f) * .7f);
 
-		material.SetColor ("_PrimaryColA", HSVToRGB (primaryA_HSV));
-		material.SetColor ("_SecondaryColA", HSVToRGB (secondaryA_HSV));
-		material.SetColor ("_PrimaryColB", HSVToRGB (primaryB_HSV));
-		material.SetColor ("_SecondaryColB", HSVToRGB (secondaryB_HSV));
-	}
+        material.SetVector(name: "_RandomBiomeValues", biomeValues);
+        var warpStrength = prng.SignedValueBiasCentre(biasStrength: .65f) * 30;
+        material.SetFloat(name: "_BiomeBlendStrength", prng.Range(min: 2f, max: 12) + Mathf.Abs(warpStrength) / 2);
+        material.SetFloat(name: "_BiomeWarpStrength", warpStrength);
+    }
 
-	Color GreyscaleColor (float value) {
-		return new Color (value, value, value, 1);
-	}
+    private void SetColours(PRNG rand, Material material)
+    {
+        var colChance = new Chance(rand);
+        var primaryA_HSV = Vector3.zero;
+        var secondaryA_HSV = Vector3.zero;
+        var primaryB_HSV = Vector3.zero;
+        var secondaryB_HSV = Vector3.zero;
 
-	Color HSVToRGB (Vector3 col) {
-		return Color.HSVToRGB (Mathf.Clamp01 (col.x), Mathf.Clamp01 (col.y), Mathf.Clamp01 (col.z));
-	}
+        // One light grey, one dark grey
+        if (colChance.Percent(percent: 25))
+        {
+            primaryA_HSV = new Vector3(x: 0, y: 0, Mathf.Lerp(a: 0.55f, b: 1, rand.ValueBiasUpper(biasStrength: .4f)));
+            secondaryA_HSV = primaryA_HSV + new Vector3(x: 0, y: 0, rand.SignedValueBiasCentre(biasStrength: 0.4f));
+            primaryB_HSV = new Vector3(x: 0, y: 0, Mathf.Lerp(a: 0f, b: 0.45f, rand.ValueBiasLower(biasStrength: .4f)));
+            secondaryB_HSV = primaryB_HSV + new Vector3(x: 0, y: 0, rand.SignedValueBiasCentre(biasStrength: 0.4f));
+        }
+        // One colour, one grey
+        else if (colChance.Percent(percent: 25))
+        {
+            // Pick grey, tending towards either very dark or very light
+            var greyValue = rand.ValueBiasExtremes(biasStrength: 0.8f);
+            primaryA_HSV = new Vector3(x: 0, y: 0, greyValue);
+            secondaryA_HSV = new Vector3(x: 0, y: 0, greyValue + rand.SignedValueBiasCentre(biasStrength: 0.5f) * .3f);
 
-	protected override void SetShadingDataComputeProperties () {
-		SetCraters (moonShape);
-		SetRandomPoints ();
-		SetShadingNoise ();
-	}
+            // If grey is dark, use bright colour, otherwise dark colour
+            var colourValue = greyValue < 0.5f
+                ? rand.ValueBiasUpper(biasStrength: 0.7f)
+                : rand.ValueBiasLower(biasStrength: 0.7f);
 
-	void SetShadingNoise () {
-		const string biomeWarpNoiseSuffix = "_biomeWarp";
-		const string detailWarpNoiseSuffix = "_detailWarp";
-		const string detailNoiseSuffix = "_detail";
+            primaryB_HSV = new Vector3(rand.Value(), rand.Range(min: 0.2f, max: 0.9f),
+                Mathf.Lerp(a: 0.1f, b: 0.9f, colourValue));
 
-		PRNG prng = new PRNG (seed);
-		PRNG prng2 = new PRNG (seed);
-		if (randomize) {
-			// warp 1
-			var randomizedBiomeWarpNoise = new SimpleNoiseSettings ();
-			randomizedBiomeWarpNoise.elevation = prng.Range (0.8f, 3f);
-			randomizedBiomeWarpNoise.scale = prng.Range (1f, 3f);
-			randomizedBiomeWarpNoise.SetComputeValues (shadingDataCompute, prng2, biomeWarpNoiseSuffix);
+            secondaryB_HSV = primaryB_HSV + rand.JiggleVector3(weightX: 0.1f, weightY: 0.2f, weightZ: 0.4f);
+        }
 
-			// warp 2
-			var randomizedDetailWarpNoise = new SimpleNoiseSettings ();
-			randomizedDetailWarpNoise.scale = prng.Range (1f, 3f);
-			randomizedDetailWarpNoise.elevation = prng.Range (1f, 5f);
-			randomizedDetailWarpNoise.SetComputeValues (shadingDataCompute, prng2, detailWarpNoiseSuffix);
+        // Two similar colours
+        else if (colChance.Percent(percent: 25))
+        {
+            primaryA_HSV = new Vector3(rand.Range(min: 0, max: 1), rand.Range(min: 0.1f, max: 0.8f),
+                rand.Range(min: 0.2f, max: 0.8f));
 
-			detailNoise.SetComputeValues (shadingDataCompute, prng2, detailNoiseSuffix);
+            secondaryA_HSV = primaryA_HSV + rand.JiggleVector3(weightX: 0.1f, weightY: 0.2f, weightZ: 0.3f);
 
-		} else {
-			biomeWarpNoise.SetComputeValues (shadingDataCompute, prng2, biomeWarpNoiseSuffix);
-			detailWarpNoise.SetComputeValues (shadingDataCompute, prng2, detailWarpNoiseSuffix);
-			detailNoise.SetComputeValues (shadingDataCompute, prng2, detailNoiseSuffix);
-		}
+            primaryB_HSV = new Vector3(primaryA_HSV.x + rand.Range(min: 0.05f, max: 0.1f),
+                rand.Range(min: 0.1f, max: 0.8f), rand.Range(min: 0.2f, max: 0.8f));
 
-	}
+            secondaryB_HSV = primaryB_HSV + rand.JiggleVector3(weightX: 0.1f, weightY: 0.2f, weightZ: 0.3f);
+        }
 
-	void SetRandomPoints () {
-		Random.InitState (seed);
+        // Two distinct colours
+        else if (colChance.Percent(percent: 25))
+        {
+            primaryA_HSV = new Vector3(rand.Value(), rand.Range(min: 0.2f, max: 0.9f),
+                rand.Range(min: 0.1f, max: 0.9f));
 
-		int randomizedNumPoints = numBiomePoints;
-		if (randomize) {
-			randomizedNumPoints = Random.Range (15, 50);
-		}
-		Random.InitState (seed);
-		var randomPoints = new Vector4[randomizedNumPoints];
-		for (int i = 0; i < randomPoints.Length; i++) {
-			var point = Random.onUnitSphere;
-			var radius = Mathf.Lerp (radiusMinMax.x, radiusMinMax.y, Random.value);
-			randomPoints[i] = new Vector4 (point.x, point.y, point.z, radius);
-		}
+            secondaryA_HSV = primaryA_HSV + rand.JiggleVector3(weightX: 0.1f, weightY: 0.2f, weightZ: 0.3f);
 
-		ComputeHelper.CreateAndSetBuffer<Vector4> (ref pointBuffer, randomPoints, shadingDataCompute, "points");
-		shadingDataCompute.SetInt ("numRandomPoints", randomPoints.Length);
-	}
+            primaryB_HSV = new Vector3((primaryA_HSV.x + rand.Range(min: 0.2f, max: 0.8f)) % 1,
+                rand.Range(min: 0.2f, max: 0.9f), rand.Range(min: 0.1f, max: 0.9f));
 
-	// Pick craters to be shaded with radial streaks emanating from them 
-	void SetCraters (MoonShape moonShape) {
-		PRNG random = new PRNG (ejectaRaySeed);
-		//int desiredNumCraterRays = random.Range (5, 15);
-		//desiredNumCraterRays = 2;
+            secondaryB_HSV = primaryB_HSV + rand.JiggleVector3(weightX: 0.1f, weightY: 0.2f, weightZ: 0.3f);
+        }
 
-		// Sort craters from largest to smallest
-		var sortedCraters = new List<CraterSettings.Crater> (moonShape.craterSettings.cachedCraters);
-		sortedCraters.Sort ((a, b) => b.size.CompareTo (a.size));
-		int poolSize = Mathf.Clamp ((int) ((sortedCraters.Count - 1) * candidatePoolSize), 1, sortedCraters.Count);
-		sortedCraters = sortedCraters.GetRange (0, poolSize);
-		random.Shuffle (sortedCraters);
+        material.SetColor(name: "_PrimaryColA", HSVToRGB(primaryA_HSV));
+        material.SetColor(name: "_SecondaryColA", HSVToRGB(secondaryA_HSV));
+        material.SetColor(name: "_PrimaryColB", HSVToRGB(primaryB_HSV));
+        material.SetColor(name: "_SecondaryColB", HSVToRGB(secondaryB_HSV));
+    }
 
-		// Choose craters
-		var chosenCraters = new List<CraterSettings.Crater> ();
+    private Color GreyscaleColor(float value) => new(value, value, value, a: 1);
 
-		for (int i = 0; i < sortedCraters.Count; i++) {
-			var currentCrater = sortedCraters[i];
+    private Color HSVToRGB(Vector3 col)
+        => Color.HSVToRGB(Mathf.Clamp01(col.x), Mathf.Clamp01(col.y), Mathf.Clamp01(col.z));
 
-			// Reject those which are too close to already chosen craters as the textures may not overlap
-			bool overlapsOtherEjecta = false;
-			for (int j = 0; j < chosenCraters.Count; j++) {
-				float dst = (currentCrater.centre - chosenCraters[j].centre).magnitude;
-				float ejectaRadiusSum = (currentCrater.size + chosenCraters[j].size) * ejectaRaysScale / 2;
+    private void SetShadingNoise()
+    {
+        const string biomeWarpNoiseSuffix = "_biomeWarp";
+        const string detailWarpNoiseSuffix = "_detailWarp";
+        const string detailNoiseSuffix = "_detail";
 
-				if (dst < ejectaRadiusSum) {
-					overlapsOtherEjecta = true;
-					break;
-				}
-			}
+        var prng = new PRNG(seed);
+        var prng2 = new PRNG(seed);
 
-			//Debug.DrawRay (currentCrater.centre, currentCrater.centre * 0.2f, (overlapsOtherEjecta) ? Color.red : Color.green);
-			if (!overlapsOtherEjecta) {
-				chosenCraters.Add (currentCrater);
+        if (randomize)
+        {
+            // warp 1
+            var randomizedBiomeWarpNoise = new SimpleNoiseSettings();
+            randomizedBiomeWarpNoise.elevation = prng.Range(min: 0.8f, max: 3f);
+            randomizedBiomeWarpNoise.scale = prng.Range(min: 1f, max: 3f);
+            randomizedBiomeWarpNoise.SetComputeValues(shadingDataCompute, prng2, biomeWarpNoiseSuffix);
 
-			}
-			if (chosenCraters.Count >= desiredNumCraterRays) {
-				break;
-			}
-		}
+            // warp 2
+            var randomizedDetailWarpNoise = new SimpleNoiseSettings();
+            randomizedDetailWarpNoise.scale = prng.Range(min: 1f, max: 3f);
+            randomizedDetailWarpNoise.elevation = prng.Range(min: 1f, max: 5f);
+            randomizedDetailWarpNoise.SetComputeValues(shadingDataCompute, prng2, detailWarpNoiseSuffix);
 
-		// Set
-		var ejectaCraters = new Vector4[chosenCraters.Count];
-		for (int i = 0; i < chosenCraters.Count; i++) {
-			var crater = chosenCraters[i];
-			ejectaCraters[i] = new Vector4 (crater.centre.x, crater.centre.y, crater.centre.z, crater.size * ejectaRaysScale);
-			//CustomDebug.DrawSphere (crater.centre, crater.size * ejectaRaysScale / 2, Color.yellow);
-		}
+            detailNoise.SetComputeValues(shadingDataCompute, prng2, detailNoiseSuffix);
+        }
+        else
+        {
+            biomeWarpNoise.SetComputeValues(shadingDataCompute, prng2, biomeWarpNoiseSuffix);
+            detailWarpNoise.SetComputeValues(shadingDataCompute, prng2, detailWarpNoiseSuffix);
+            detailNoise.SetComputeValues(shadingDataCompute, prng2, detailNoiseSuffix);
+        }
+    }
 
-		ComputeHelper.CreateAndSetBuffer<Vector4> (ref craterBuffer, ejectaCraters, shadingDataCompute, "ejectaCraters");
-		shadingDataCompute.SetInt ("numEjectaCraters", chosenCraters.Count);
-	}
+    private void SetRandomPoints()
+    {
+        Random.InitState(seed);
 
-	public override void ReleaseBuffers () {
-		base.ReleaseBuffers ();
-		ComputeHelper.Release (craterBuffer, pointBuffer);
-	}
+        var randomizedNumPoints = numBiomePoints;
 
-	protected override void OnValidate () {
-		base.OnValidate ();
-	}
+        if (randomize)
+        {
+            randomizedNumPoints = Random.Range(minInclusive: 15, maxExclusive: 50);
+        }
+
+        Random.InitState(seed);
+        var randomPoints = new Vector4[randomizedNumPoints];
+
+        for (var i = 0; i < randomPoints.Length; i++)
+        {
+            var point = Random.onUnitSphere;
+            var radius = Mathf.Lerp(radiusMinMax.x, radiusMinMax.y, Random.value);
+            randomPoints[i] = new Vector4(point.x, point.y, point.z, radius);
+        }
+
+        ComputeHelper.CreateAndSetBuffer(ref pointBuffer, randomPoints, shadingDataCompute, nameID: "points");
+        shadingDataCompute.SetInt(name: "numRandomPoints", randomPoints.Length);
+    }
+
+    // Pick craters to be shaded with radial streaks emanating from them 
+    private void SetCraters(MoonShape moonShape)
+    {
+        var random = new PRNG(ejectaRaySeed);
+        //int desiredNumCraterRays = random.Range (5, 15);
+        //desiredNumCraterRays = 2;
+
+        // Sort craters from largest to smallest
+        var sortedCraters = new List<CraterSettings.Crater>(moonShape.craterSettings.cachedCraters);
+        sortedCraters.Sort((a, b) => b.size.CompareTo(a.size));
+        var poolSize = Mathf.Clamp((int)((sortedCraters.Count - 1) * candidatePoolSize), min: 1, sortedCraters.Count);
+        sortedCraters = sortedCraters.GetRange(index: 0, poolSize);
+        random.Shuffle(sortedCraters);
+
+        // Choose craters
+        var chosenCraters = new List<CraterSettings.Crater>();
+
+        for (var i = 0; i < sortedCraters.Count; i++)
+        {
+            var currentCrater = sortedCraters[i];
+
+            // Reject those which are too close to already chosen craters as the textures may not overlap
+            var overlapsOtherEjecta = false;
+
+            for (var j = 0; j < chosenCraters.Count; j++)
+            {
+                var dst = (currentCrater.centre - chosenCraters[j].centre).magnitude;
+                var ejectaRadiusSum = (currentCrater.size + chosenCraters[j].size) * ejectaRaysScale / 2;
+
+                if (dst < ejectaRadiusSum)
+                {
+                    overlapsOtherEjecta = true;
+
+                    break;
+                }
+            }
+
+            //Debug.DrawRay (currentCrater.centre, currentCrater.centre * 0.2f, (overlapsOtherEjecta) ? Color.red : Color.green);
+            if (!overlapsOtherEjecta)
+            {
+                chosenCraters.Add(currentCrater);
+            }
+
+            if (chosenCraters.Count >= desiredNumCraterRays)
+            {
+                break;
+            }
+        }
+
+        // Set
+        var ejectaCraters = new Vector4[chosenCraters.Count];
+
+        for (var i = 0; i < chosenCraters.Count; i++)
+        {
+            var crater = chosenCraters[i];
+
+            ejectaCraters[i] = new Vector4(crater.centre.x, crater.centre.y, crater.centre.z,
+                crater.size * ejectaRaysScale);
+            //CustomDebug.DrawSphere (crater.centre, crater.size * ejectaRaysScale / 2, Color.yellow);
+        }
+
+        ComputeHelper.CreateAndSetBuffer(ref craterBuffer, ejectaCraters, shadingDataCompute, nameID: "ejectaCraters");
+        shadingDataCompute.SetInt(name: "numEjectaCraters", chosenCraters.Count);
+    }
 }

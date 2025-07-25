@@ -1,13 +1,12 @@
-﻿
+﻿using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Meshing.Iterators
 {
-    using System.Collections.Generic;
-    using TriangleNet.Geometry;
-    using TriangleNet.Topology;
-
     public class VertexCirculator
     {
-        List<Otri> cache = new List<Otri>();
+        private readonly List<Otri> cache = new();
 
         public VertexCirculator(Mesh mesh)
         {
@@ -21,7 +20,7 @@ namespace TriangleNet.Meshing.Iterators
         /// <returns></returns>
         public IEnumerable<Vertex> EnumerateVertices(Vertex vertex)
         {
-            BuildCache(vertex, true);
+            BuildCache(vertex, vertices: true);
 
             foreach (var item in cache)
             {
@@ -36,7 +35,7 @@ namespace TriangleNet.Meshing.Iterators
         /// <returns></returns>
         public IEnumerable<ITriangle> EnumerateTriangles(Vertex vertex)
         {
-            BuildCache(vertex, false);
+            BuildCache(vertex, vertices: false);
 
             foreach (var item in cache)
             {
@@ -48,9 +47,9 @@ namespace TriangleNet.Meshing.Iterators
         {
             cache.Clear();
 
-            Otri init = vertex.tri;
-            Otri next = default(Otri);
-            Otri prev = default(Otri);
+            var init = vertex.tri;
+            var next = default(Otri);
+            var prev = default(Otri);
 
             init.Copy(ref next);
 
@@ -85,7 +84,7 @@ namespace TriangleNet.Meshing.Iterators
 
                 while (next.tri.id != Mesh.DUMMY)
                 {
-                    cache.Insert(0, next);
+                    cache.Insert(index: 0, next);
 
                     next.Oprev();
 

@@ -5,18 +5,18 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Meshing.Algorithm
 {
-    using System.Collections.Generic;
-    using TriangleNet.Topology;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// Builds a delaunay triangulation using the incremental algorithm.
     /// </summary>
     public class Incremental : ITriangulator
     {
-        Mesh mesh;
+        private Mesh mesh;
 
         /// <summary>
         /// Form a Delaunay triangulation by incrementally inserting vertices.
@@ -25,10 +25,10 @@ namespace TriangleNet.Meshing.Algorithm
         /// triangulation.</returns>
         public IMesh Triangulate(IList<Vertex> points, Configuration config)
         {
-            this.mesh = new Mesh(config);
-            this.mesh.TransferNodes(points);
+            mesh = new Mesh(config);
+            mesh.TransferNodes(points);
 
-            Otri starttri = new Otri();
+            var starttri = new Otri();
 
             // Create a triangular bounding box.
             GetBoundingBox();
@@ -36,23 +36,26 @@ namespace TriangleNet.Meshing.Algorithm
             foreach (var v in mesh.vertices.Values)
             {
                 starttri.tri = mesh.dummytri;
-                Osub tmp = default(Osub);
-                if (mesh.InsertVertex(v, ref starttri, ref tmp, false, false) == InsertVertexResult.Duplicate)
+                var tmp = default(Osub);
+
+                if (mesh.InsertVertex(v, ref starttri, ref tmp, segmentflaws: false, triflaws: false) ==
+                    InsertVertexResult.Duplicate)
                 {
                     if (Log.Verbose)
                     {
-                        Log.Instance.Warning("A duplicate vertex appeared and was ignored.",
-                            "Incremental.Triangulate()");
+                        Log.Instance.Warning(message: "A duplicate vertex appeared and was ignored.",
+                            info: "Incremental.Triangulate()");
                     }
+
                     v.type = VertexType.UndeadVertex;
                     mesh.undeads++;
                 }
             }
 
             // Remove the bounding box.
-            this.mesh.hullsize = RemoveBox();
+            mesh.hullsize = RemoveBox();
 
-            return this.mesh;
+            return mesh;
         }
 
         /// <summary>
@@ -63,21 +66,24 @@ namespace TriangleNet.Meshing.Algorithm
         /// used by the point location routines, but (mostly) ignored by the
         /// Delaunay edge flip routines.
         /// </remarks>
-        void GetBoundingBox()
+        private void GetBoundingBox()
         {
-            Otri inftri = default(Otri); // Handle for the triangular bounding box.
-            Rectangle box = mesh.bounds;
+            var inftri = default(Otri); // Handle for the triangular bounding box.
+            var box = mesh.bounds;
 
             // Find the width (or height, whichever is larger) of the triangulation.
-            double width = box.Width;
+            var width = box.Width;
+
             if (box.Height > width)
             {
                 width = box.Height;
             }
+
             if (width == 0.0)
             {
                 width = 1.0;
             }
+
             // Create the vertices of the bounding box.
             mesh.infvertex1 = new Vertex(box.Left - 50.0 * width, box.Bottom - 40.0 * width);
             mesh.infvertex2 = new Vertex(box.Right + 50.0 * width, box.Bottom - 40.0 * width);
@@ -105,16 +111,16 @@ namespace TriangleNet.Meshing.Algorithm
         /// the three bounding box vertices (one triangle for each edge of the
         /// convex hull of the inner mesh).  This routine removes these triangles.
         /// </remarks>
-        int RemoveBox()
+        private int RemoveBox()
         {
-            Otri deadtriangle = default(Otri);
-            Otri searchedge = default(Otri);
-            Otri checkedge = default(Otri);
-            Otri nextedge = default(Otri), finaledge = default(Otri), dissolveedge = default(Otri);
+            var deadtriangle = default(Otri);
+            var searchedge = default(Otri);
+            var checkedge = default(Otri);
+            Otri nextedge = default, finaledge = default, dissolveedge = default;
             Vertex markorg;
             int hullsize;
 
-            bool noPoly = !mesh.behavior.Poly;
+            var noPoly = !mesh.behavior.Poly;
 
             // Find a boundary triangle.
             nextedge.tri = mesh.dummytri;
@@ -133,6 +139,7 @@ namespace TriangleNet.Meshing.Algorithm
             // adjacent to the first one.
             nextedge.Lnext(ref checkedge);
             checkedge.Sym();
+
             if (checkedge.tri.id == Mesh.DUMMY)
             {
                 // Go on to the next triangle.  There are only three boundary
@@ -147,11 +154,13 @@ namespace TriangleNet.Meshing.Algorithm
             mesh.dummytri.neighbors[0] = searchedge;
 
             hullsize = -2;
+
             while (!nextedge.Equals(finaledge))
             {
                 hullsize++;
                 nextedge.Lprev(ref dissolveedge);
                 dissolveedge.Sym();
+
                 // If not using a PSLG, the vertices should be marked now.
                 // (If using a PSLG, markhull() will do the job.)
                 if (noPoly)
@@ -163,18 +172,21 @@ namespace TriangleNet.Meshing.Algorithm
                     if (dissolveedge.tri.id != Mesh.DUMMY)
                     {
                         markorg = dissolveedge.Org();
+
                         if (markorg.label == 0)
                         {
                             markorg.label = 1;
                         }
                     }
                 }
+
                 // Disconnect the bounding box triangle from the mesh triangle.
                 dissolveedge.Dissolve(mesh.dummytri);
                 nextedge.Lnext(ref deadtriangle);
                 deadtriangle.Sym(ref nextedge);
                 // Get rid of the bounding box triangle.
                 mesh.TriangleDealloc(deadtriangle.tri);
+
                 // Do we need to turn the corner?
                 if (nextedge.tri.id == Mesh.DUMMY)
                 {

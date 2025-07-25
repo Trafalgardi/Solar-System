@@ -4,15 +4,15 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+
 namespace TriangleNet.Logging
 {
-    using System.Collections.Generic;
-
     public enum LogLevel
     {
         Info = 0,
         Warning = 1,
-        Error = 2
+        Error = 2,
     }
 
     /// <summary>
@@ -20,15 +20,15 @@ namespace TriangleNet.Logging
     /// </summary>
     public interface ILog<T> where T : ILogItem
     {
+        IList<T> Data { get; }
+
+        LogLevel Level { get; }
+
         void Add(T item);
         void Clear();
 
         void Info(string message);
         void Error(string message, string info);
         void Warning(string message, string info);
-
-        IList<T> Data { get; }
-
-        LogLevel Level { get; }
     }
 }

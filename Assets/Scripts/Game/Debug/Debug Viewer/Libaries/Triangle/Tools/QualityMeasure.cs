@@ -5,11 +5,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Tools
 {
-    using System;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// Provides mesh quality information.
     /// </summary>
@@ -53,11 +53,11 @@ namespace TriangleNet.Tools
     /// </remarks>
     public class QualityMeasure
     {
-        AreaMeasure areaMeasure;
-        AlphaMeasure alphaMeasure;
-        Q_Measure qMeasure;
+        private readonly AreaMeasure areaMeasure;
+        private readonly AlphaMeasure alphaMeasure;
+        private readonly Q_Measure qMeasure;
 
-        Mesh mesh;
+        private Mesh mesh;
 
         public QualityMeasure()
         {
@@ -65,98 +65,6 @@ namespace TriangleNet.Tools
             alphaMeasure = new AlphaMeasure();
             qMeasure = new Q_Measure();
         }
-
-        #region Public properties
-
-        /// <summary>
-        /// Minimum triangle area.
-        /// </summary>
-        public double AreaMinimum
-        {
-            get { return areaMeasure.area_min; }
-        }
-
-        /// <summary>
-        /// Maximum triangle area.
-        /// </summary>
-        public double AreaMaximum
-        {
-            get { return areaMeasure.area_max; }
-        }
-
-        /// <summary>
-        /// Ratio of maximum and minimum triangle area.
-        /// </summary>
-        public double AreaRatio
-        {
-            get { return areaMeasure.area_max / areaMeasure.area_min; }
-        }
-
-        /// <summary>
-        /// Smallest angle.
-        /// </summary>
-        public double AlphaMinimum
-        {
-            get { return alphaMeasure.alpha_min; }
-        }
-
-        /// <summary>
-        /// Maximum smallest angle.
-        /// </summary>
-        public double AlphaMaximum
-        {
-            get { return alphaMeasure.alpha_max; }
-        }
-
-        /// <summary>
-        /// Average angle.
-        /// </summary>
-        public double AlphaAverage
-        {
-            get { return alphaMeasure.alpha_ave; }
-        }
-
-        /// <summary>
-        /// Average angle weighted by area.
-        /// </summary>
-        public double AlphaArea
-        {
-            get { return alphaMeasure.alpha_area; }
-        }
-
-        /// <summary>
-        /// Smallest aspect ratio.
-        /// </summary>
-        public double Q_Minimum
-        {
-            get { return qMeasure.q_min; }
-        }
-
-        /// <summary>
-        /// Largest aspect ratio.
-        /// </summary>
-        public double Q_Maximum
-        {
-            get { return qMeasure.q_max; }
-        }
-
-        /// <summary>
-        /// Average aspect ratio.
-        /// </summary>
-        public double Q_Average
-        {
-            get { return qMeasure.q_ave; }
-        }
-
-        /// <summary>
-        /// Average aspect ratio weighted by area.
-        /// </summary>
-        public double Q_Area
-        {
-            get { return qMeasure.q_area; }
-        }
-
-        #endregion
 
         public void Update(Mesh mesh)
         {
@@ -168,43 +76,6 @@ namespace TriangleNet.Tools
             qMeasure.Reset();
 
             Compute();
-        }
-
-        private void Compute()
-        {
-            Point a, b, c;
-            double ab, bc, ca;
-            double lx, ly;
-            double area;
-
-            int n = 0;
-
-            foreach (var tri in mesh.triangles)
-            {
-                n++;
-
-                a = tri.vertices[0];
-                b = tri.vertices[1];
-                c = tri.vertices[2];
-
-                lx = a.x - b.x;
-                ly = a.y - b.y;
-                ab = Math.Sqrt(lx * lx + ly * ly);
-                lx = b.x - c.x;
-                ly = b.y - c.y;
-                bc = Math.Sqrt(lx * lx + ly * ly);
-                lx = c.x - a.x;
-                ly = c.y - a.y;
-                ca = Math.Sqrt(lx * lx + ly * ly);
-
-                area = areaMeasure.Measure(a, b, c);
-                alphaMeasure.Measure(ab, bc, ca, area);
-                qMeasure.Measure(ab, bc, ca, area);
-            }
-
-            // Normalize measures
-            alphaMeasure.Normalize(n, areaMeasure.area_total);
-            qMeasure.Normalize(n, areaMeasure.area_total);
         }
 
         /// <summary>
@@ -237,7 +108,10 @@ namespace TriangleNet.Tools
         /// </remarks>
         public int Bandwidth()
         {
-            if (mesh == null) return 0;
+            if (mesh == null)
+            {
+                return 0;
+            }
 
             // Lower and upper bandwidth of the matrix
             int ml = 0, mu = 0;
@@ -246,11 +120,11 @@ namespace TriangleNet.Tools
 
             foreach (var tri in mesh.triangles)
             {
-                for (int j = 0; j < 3; j++)
+                for (var j = 0; j < 3; j++)
                 {
                     gi = tri.GetVertex(j).id;
 
-                    for (int k = 0; k < 3; k++)
+                    for (var k = 0; k < 3; k++)
                     {
                         gj = tri.GetVertex(k).id;
 
@@ -263,16 +137,56 @@ namespace TriangleNet.Tools
             return ml + 1 + mu;
         }
 
-        class AreaMeasure
+        private void Compute()
+        {
+            Point a, b, c;
+            double ab, bc, ca;
+            double lx, ly;
+            double area;
+
+            var n = 0;
+
+            foreach (var tri in mesh.triangles)
+            {
+                n++;
+
+                a = tri.vertices[0];
+                b = tri.vertices[1];
+                c = tri.vertices[2];
+
+                lx = a.x - b.x;
+                ly = a.y - b.y;
+                ab = Math.Sqrt(lx * lx + ly * ly);
+                lx = b.x - c.x;
+                ly = b.y - c.y;
+                bc = Math.Sqrt(lx * lx + ly * ly);
+                lx = c.x - a.x;
+                ly = c.y - a.y;
+                ca = Math.Sqrt(lx * lx + ly * ly);
+
+                area = areaMeasure.Measure(a, b, c);
+                alphaMeasure.Measure(ab, bc, ca, area);
+                qMeasure.Measure(ab, bc, ca, area);
+            }
+
+            // Normalize measures
+            alphaMeasure.Normalize(n, areaMeasure.area_total);
+            qMeasure.Normalize(n, areaMeasure.area_total);
+        }
+
+        private class AreaMeasure
         {
             // Minimum area
             public double area_min = double.MaxValue;
+
             // Maximum area
             public double area_max = -double.MaxValue;
+
             // Total area of geometry
-            public double area_total = 0;
+            public double area_total;
+
             // Nmber of triangles with zero area
-            public int area_zero = 0;
+            public int area_zero;
 
             /// <summary>
             /// Reset all values.
@@ -294,7 +208,7 @@ namespace TriangleNet.Tools
             /// <returns>Triangle area.</returns>
             public double Measure(Point a, Point b, Point c)
             {
-                double area = 0.5 * Math.Abs(a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+                var area = 0.5 * Math.Abs(a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
 
                 area_min = Math.Min(area_min, area);
                 area_max = Math.Max(area_max, area);
@@ -321,14 +235,17 @@ namespace TriangleNet.Tools
         /// is 60). The best possible value is 1, and the worst 0. A good
         /// triangulation should have an alpha score close to 1.
         /// </remarks>
-        class AlphaMeasure
+        private class AlphaMeasure
         {
             // Minimum value over all triangles
             public double alpha_min;
+
             // Maximum value over all triangles
             public double alpha_max;
+
             // Value averaged over all triangles
             public double alpha_ave;
+
             // Value averaged over all triangles and weighted by area
             public double alpha_area;
 
@@ -343,22 +260,6 @@ namespace TriangleNet.Tools
                 alpha_area = 0;
             }
 
-            double acos(double c)
-            {
-                if (c <= -1.0)
-                {
-                    return Math.PI;
-                }
-                else if (1.0 <= c)
-                {
-                    return 0.0;
-                }
-                else
-                {
-                    return Math.Acos(c);
-                }
-            }
-
             /// <summary>
             /// Compute q value of given triangle.
             /// </summary>
@@ -369,11 +270,11 @@ namespace TriangleNet.Tools
             /// <returns></returns>
             public double Measure(double ab, double bc, double ca, double area)
             {
-                double alpha = double.MaxValue;
+                var alpha = double.MaxValue;
 
-                double ab2 = ab * ab;
-                double bc2 = bc * bc;
-                double ca2 = ca * ca;
+                var ab2 = ab * ab;
+                var bc2 = bc * bc;
+                var ca2 = ca * ca;
 
                 double a_angle;
                 double b_angle;
@@ -455,6 +356,21 @@ namespace TriangleNet.Tools
                     alpha_area = 0.0;
                 }
             }
+
+            private double acos(double c)
+            {
+                if (c <= -1.0)
+                {
+                    return Math.PI;
+                }
+
+                if (1.0 <= c)
+                {
+                    return 0.0;
+                }
+
+                return Math.Acos(c);
+            }
         }
 
         /// <summary>
@@ -470,14 +386,17 @@ namespace TriangleNet.Tools
         /// equilateral shape, for which Q = 1. A good mesh would have
         /// 0.5 &lt; Q.
         /// </remarks>
-        class Q_Measure
+        private class Q_Measure
         {
             // Minimum value over all triangles
             public double q_min;
+
             // Maximum value over all triangles
             public double q_max;
+
             // Average value
             public double q_ave;
+
             // Average value weighted by the area of each triangle
             public double q_area;
 
@@ -502,7 +421,7 @@ namespace TriangleNet.Tools
             /// <returns></returns>
             public double Measure(double ab, double bc, double ca, double area)
             {
-                double q = (bc + ca - ab) * (ca + ab - bc) * (ab + bc - ca) / (ab * bc * ca);
+                var q = (bc + ca - ab) * (ca + ab - bc) * (ab + bc - ca) / (ab * bc * ca);
 
                 q_min = Math.Min(q_min, q);
                 q_max = Math.Max(q_max, q);
@@ -537,5 +456,64 @@ namespace TriangleNet.Tools
                 }
             }
         }
+
+        #region Public properties
+
+        /// <summary>
+        /// Minimum triangle area.
+        /// </summary>
+        public double AreaMinimum => areaMeasure.area_min;
+
+        /// <summary>
+        /// Maximum triangle area.
+        /// </summary>
+        public double AreaMaximum => areaMeasure.area_max;
+
+        /// <summary>
+        /// Ratio of maximum and minimum triangle area.
+        /// </summary>
+        public double AreaRatio => areaMeasure.area_max / areaMeasure.area_min;
+
+        /// <summary>
+        /// Smallest angle.
+        /// </summary>
+        public double AlphaMinimum => alphaMeasure.alpha_min;
+
+        /// <summary>
+        /// Maximum smallest angle.
+        /// </summary>
+        public double AlphaMaximum => alphaMeasure.alpha_max;
+
+        /// <summary>
+        /// Average angle.
+        /// </summary>
+        public double AlphaAverage => alphaMeasure.alpha_ave;
+
+        /// <summary>
+        /// Average angle weighted by area.
+        /// </summary>
+        public double AlphaArea => alphaMeasure.alpha_area;
+
+        /// <summary>
+        /// Smallest aspect ratio.
+        /// </summary>
+        public double Q_Minimum => qMeasure.q_min;
+
+        /// <summary>
+        /// Largest aspect ratio.
+        /// </summary>
+        public double Q_Maximum => qMeasure.q_max;
+
+        /// <summary>
+        /// Average aspect ratio.
+        /// </summary>
+        public double Q_Average => qMeasure.q_ave;
+
+        /// <summary>
+        /// Average aspect ratio weighted by area.
+        /// </summary>
+        public double Q_Area => qMeasure.q_area;
+
+        #endregion
     }
 }

@@ -1,21 +1,19 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 
-[CustomEditor (typeof (TextureCombiner), true)]
-public class TextureCombinerEditor : Editor {
+[CustomEditor(typeof(TextureCombiner), editorForChildClasses: true)]
+public class TextureCombinerEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        DrawDefaultInspector();
 
-	public override void OnInspectorGUI () {
-		DrawDefaultInspector ();
+        var textureCombiner = (TextureCombiner)target;
 
-		var textureCombiner = (TextureCombiner) target;
-
-		if (GUILayout.Button ("Save")) {
-			string path = Application.dataPath + "/Resources";
-			textureCombiner.SaveTexture (path);
-		}
-
-	}
-
+        if (GUILayout.Button(text: "Save"))
+        {
+            var path = Application.dataPath + "/Resources";
+            textureCombiner.SaveTexture(path);
+        }
+    }
 }

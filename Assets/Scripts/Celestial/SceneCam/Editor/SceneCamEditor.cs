@@ -1,78 +1,91 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-[CustomEditor (typeof (SceneCamManager))]
-public class SceneCamEditor : Editor {
+[CustomEditor(typeof(SceneCamManager))]
+public class SceneCamEditor : Editor
+{
+    private SceneCamManager manager;
 
-	SceneCamManager manager;
+    public override void OnInspectorGUI()
+    {
+        DrawDefaultInspector();
 
-	public override void OnInspectorGUI () {
-		DrawDefaultInspector ();
+        var activeSceneView = SceneView.lastActiveSceneView;
+        var allViews = SceneView.sceneViews;
 
-		var activeSceneView = SceneView.lastActiveSceneView;
-		var allViews = SceneView.sceneViews;
+        if (manager.savedViews.Count > 0)
+        {
+            GUILayout.Label($"Saved views: ({manager.savedViews.Count})");
+            var deleteIndex = -1;
 
-		if (manager.savedViews.Count > 0) {
-			GUILayout.Label ($"Saved views: ({manager.savedViews.Count})");
-			int deleteIndex = -1;
+            for (var i = 0; i < manager.savedViews.Count; i++)
+            {
+                GUILayout.BeginVertical(style: "GroupBox");
+                var savedView = manager.savedViews[i];
 
-			for (int i = 0; i < manager.savedViews.Count; i++) {
-				GUILayout.BeginVertical ("GroupBox");
-				var savedView = manager.savedViews[i];
+                savedView.name = GUILayout.TextField(savedView.name);
 
-				savedView.name = GUILayout.TextField (savedView.name);
+                GUILayout.BeginHorizontal();
 
-				GUILayout.BeginHorizontal ();
-				if (GUILayout.Button ("Set Camera View")) {
-					Undo.RecordObject (manager, "Set Camera View");
-					activeSceneView.pivot = savedView.pivot;
-					activeSceneView.rotation = savedView.rotation;
-					activeSceneView.size = savedView.size;
-				}
-				if (GUILayout.Button ("Replace")) {
-					Undo.RecordObject (manager, "Replace View");
-					savedView.pivot = activeSceneView.pivot;
-					savedView.rotation = activeSceneView.rotation;
-					savedView.size = activeSceneView.size;
-				}
-				if (GUILayout.Button ("Delete")) {
-					Undo.RecordObject (manager, "Delete View");
-					deleteIndex = i;
-				}
-				GUILayout.EndHorizontal ();
-				GUILayout.EndVertical ();
-			}
+                if (GUILayout.Button(text: "Set Camera View"))
+                {
+                    Undo.RecordObject(manager, name: "Set Camera View");
+                    activeSceneView.pivot = savedView.pivot;
+                    activeSceneView.rotation = savedView.rotation;
+                    activeSceneView.size = savedView.size;
+                }
 
-			if (deleteIndex != -1) {
-				manager.savedViews.RemoveAt (deleteIndex);
-			}
+                if (GUILayout.Button(text: "Replace"))
+                {
+                    Undo.RecordObject(manager, name: "Replace View");
+                    savedView.pivot = activeSceneView.pivot;
+                    savedView.rotation = activeSceneView.rotation;
+                    savedView.size = activeSceneView.size;
+                }
 
-			GUILayout.Space (15);
-		}
+                if (GUILayout.Button(text: "Delete"))
+                {
+                    Undo.RecordObject(manager, name: "Delete View");
+                    deleteIndex = i;
+                }
 
-		foreach (var v in allViews) {
-			//GUILayout.Label (v.ToString ());
-		}
+                GUILayout.EndHorizontal();
+                GUILayout.EndVertical();
+            }
 
-		if (GUILayout.Button ("Save Current View")) {
-			Undo.RecordObject (manager, "Save View");
-			var newView = new SceneCamManager.SavedView ();
-			newView.name = $"View ({manager.savedViews.Count})";
-			newView.pivot = activeSceneView.pivot;
-			newView.rotation = activeSceneView.rotation;
-			newView.size = activeSceneView.size;
-			manager.savedViews.Add (newView);
-		}
-	}
+            if (deleteIndex != -1)
+            {
+                manager.savedViews.RemoveAt(deleteIndex);
+            }
 
-	void OnEnable () {
-		manager = (SceneCamManager) target;
+            GUILayout.Space(pixels: 15);
+        }
 
-		if (manager.savedViews == null) {
-			manager.savedViews = new List<SceneCamManager.SavedView> ();
-		}
-	}
+        foreach (var v in allViews)
+        {
+            //GUILayout.Label (v.ToString ());
+        }
 
+        if (GUILayout.Button(text: "Save Current View"))
+        {
+            Undo.RecordObject(manager, name: "Save View");
+            var newView = new SceneCamManager.SavedView();
+            newView.name = $"View ({manager.savedViews.Count})";
+            newView.pivot = activeSceneView.pivot;
+            newView.rotation = activeSceneView.rotation;
+            newView.size = activeSceneView.size;
+            manager.savedViews.Add(newView);
+        }
+    }
+
+    private void OnEnable()
+    {
+        manager = (SceneCamManager)target;
+
+        if (manager.savedViews == null)
+        {
+            manager.savedViews = new List<SceneCamManager.SavedView>();
+        }
+    }
 }

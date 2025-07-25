@@ -5,23 +5,18 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using System.Linq;
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Tools
 {
-    using System.Collections.Generic;
-    using System.Linq;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// A Quadtree implementation optimized for triangles.
     /// </summary>
     public class TriangleQuadTree
     {
-        QuadNode root;
-
-        internal ITriangle[] triangles;
-
-        internal int sizeBound;
-        internal int maxDepth;
+        private readonly QuadNode root;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TriangleQuadTree" /> class.
@@ -44,9 +39,9 @@ namespace TriangleNet.Tools
 
             triangles = mesh.Triangles.ToArray();
 
-            int currentDepth = 0;
+            var currentDepth = 0;
 
-            root = new QuadNode(mesh.Bounds, this, true);
+            root = new QuadNode(mesh.Bounds, this, init: true);
             root.CreateSubRegion(++currentDepth);
         }
 
@@ -57,9 +52,9 @@ namespace TriangleNet.Tools
 
             foreach (var i in indices)
             {
-                var tri = this.triangles[i];
+                var tri = triangles[i];
 
-                if (IsPointInTriangle(point, tri.GetVertex(0), tri.GetVertex(1), tri.GetVertex(2)))
+                if (IsPointInTriangle(point, tri.GetVertex(index: 0), tri.GetVertex(index: 1), tri.GetVertex(index: 2)))
                 {
                     return tri;
                 }
@@ -67,6 +62,11 @@ namespace TriangleNet.Tools
 
             return null;
         }
+
+        internal ITriangle[] triangles;
+
+        internal int sizeBound;
+        internal int maxDepth;
 
         /// <summary>
         /// Test, if a given point lies inside a triangle.
@@ -79,15 +79,15 @@ namespace TriangleNet.Tools
         internal static bool IsPointInTriangle(Point p, Point t0, Point t1, Point t2)
         {
             // TODO: no need to create new Point instances here
-            Point d0 = new Point(t1.x - t0.x, t1.y - t0.y);
-            Point d1 = new Point(t2.x - t0.x, t2.y - t0.y);
-            Point d2 = new Point(p.x - t0.x, p.y - t0.y);
+            var d0 = new Point(t1.x - t0.x, t1.y - t0.y);
+            var d1 = new Point(t2.x - t0.x, t2.y - t0.y);
+            var d2 = new Point(p.x - t0.x, p.y - t0.y);
 
             // crossproduct of (0, 0, 1) and d0
-            Point c0 = new Point(-d0.y, d0.x);
+            var c0 = new Point(-d0.y, d0.x);
 
             // crossproduct of (0, 0, 1) and d1
-            Point c1 = new Point(-d1.y, d1.x);
+            var c1 = new Point(-d1.y, d1.x);
 
             // Linear combination d2 = s * d0 + v * d1.
             //
@@ -97,10 +97,10 @@ namespace TriangleNet.Tools
             // s = d2 * c1 / d0 * c1
             // v = d2 * c0 / d1 * c0
 
-            double s = DotProduct(d2, c1) / DotProduct(d0, c1);
-            double v = DotProduct(d2, c0) / DotProduct(d1, c0);
+            var s = DotProduct(d2, c1) / DotProduct(d0, c1);
+            var v = DotProduct(d2, c0) / DotProduct(d1, c0);
 
-            if (s >= 0 && v >= 0 && ((s + v) <= 1))
+            if (s >= 0 && v >= 0 && s + v <= 1)
             {
                 // Point is inside or on the edge of this triangle.
                 return true;
@@ -109,35 +109,32 @@ namespace TriangleNet.Tools
             return false;
         }
 
-        internal static double DotProduct(Point p, Point q)
-        {
-            return p.x * q.x + p.y * q.y;
-        }
+        internal static double DotProduct(Point p, Point q) => p.x * q.x + p.y * q.y;
 
         /// <summary>
         /// A node of the quadtree.
         /// </summary>
-        class QuadNode
+        private class QuadNode
         {
-            const int SW = 0;
-            const int SE = 1;
-            const int NW = 2;
-            const int NE = 3;
+            private const int SW = 0;
+            private const int SE = 1;
+            private const int NW = 2;
+            private const int NE = 3;
 
-            const double EPS = 1e-6;
+            private const double EPS = 1e-6;
 
-            static readonly byte[] BITVECTOR = { 0x1, 0x2, 0x4, 0x8 };
+            private static readonly byte[] BITVECTOR = { 0x1, 0x2, 0x4, 0x8, };
 
-            Rectangle bounds;
-            Point pivot;
-            TriangleQuadTree tree;
-            QuadNode[] regions;
-            List<int> triangles;
+            private readonly Rectangle bounds;
+            private readonly Point pivot;
+            private readonly TriangleQuadTree tree;
+            private readonly QuadNode[] regions;
+            private readonly List<int> triangles;
 
-            byte bitRegions;
+            private byte bitRegions;
 
             public QuadNode(Rectangle box, TriangleQuadTree tree)
-                : this(box, tree, false)
+                : this(box, tree, init: false)
             {
             }
 
@@ -145,22 +142,22 @@ namespace TriangleNet.Tools
             {
                 this.tree = tree;
 
-                this.bounds = new Rectangle(box.Left, box.Bottom, box.Width, box.Height);
-                this.pivot = new Point((box.Left + box.Right) / 2, (box.Bottom + box.Top) / 2);
+                bounds = new Rectangle(box.Left, box.Bottom, box.Width, box.Height);
+                pivot = new Point((box.Left + box.Right) / 2, (box.Bottom + box.Top) / 2);
 
-                this.bitRegions = 0;
+                bitRegions = 0;
 
-                this.regions = new QuadNode[4];
-                this.triangles = new List<int>();
+                regions = new QuadNode[4];
+                triangles = new List<int>();
 
                 if (init)
                 {
-                    int count = tree.triangles.Length;
+                    var count = tree.triangles.Length;
 
                     // Allocate memory upfront
                     triangles.Capacity = count;
 
-                    for (int i = 0; i < count; i++)
+                    for (var i = 0; i < count; i++)
                     {
                         triangles.Add(i);
                     }
@@ -169,11 +166,13 @@ namespace TriangleNet.Tools
 
             public List<int> FindTriangles(Point searchPoint)
             {
-                int region = FindRegion(searchPoint);
+                var region = FindRegion(searchPoint);
+
                 if (regions[region] == null)
                 {
                     return triangles;
                 }
+
                 return regions[region].FindTriangles(searchPoint);
             }
 
@@ -206,21 +205,21 @@ namespace TriangleNet.Tools
                 box = new Rectangle(pivot.x, pivot.y, width, height);
                 regions[3] = new QuadNode(box, tree);
 
-                Point[] triangle = new Point[3];
+                var triangle = new Point[3];
 
                 // Find region for every triangle vertex
                 foreach (var index in triangles)
                 {
-                    ITriangle tri = tree.triangles[index];
+                    var tri = tree.triangles[index];
 
-                    triangle[0] = tri.GetVertex(0);
-                    triangle[1] = tri.GetVertex(1);
-                    triangle[2] = tri.GetVertex(2);
+                    triangle[0] = tri.GetVertex(index: 0);
+                    triangle[1] = tri.GetVertex(index: 1);
+                    triangle[2] = tri.GetVertex(index: 2);
 
                     AddTriangleToRegion(triangle, index);
                 }
 
-                for (int i = 0; i < 4; i++)
+                for (var i = 0; i < 4; i++)
                 {
                     if (regions[i].triangles.Count > tree.sizeBound && currentDepth < tree.maxDepth)
                     {
@@ -229,15 +228,17 @@ namespace TriangleNet.Tools
                 }
             }
 
-            void AddTriangleToRegion(Point[] triangle, int index)
+            private void AddTriangleToRegion(Point[] triangle, int index)
             {
                 bitRegions = 0;
-                if (TriangleQuadTree.IsPointInTriangle(pivot, triangle[0], triangle[1], triangle[2]))
+
+                if (IsPointInTriangle(pivot, triangle[0], triangle[1], triangle[2]))
                 {
                     AddToRegion(index, SW);
                     AddToRegion(index, SE);
                     AddToRegion(index, NW);
                     AddToRegion(index, NE);
+
                     return;
                 }
 
@@ -246,12 +247,12 @@ namespace TriangleNet.Tools
                 if (bitRegions == 0)
                 {
                     // we didn't find any intersection so we add this triangle to a point's region		
-                    int region = FindRegion(triangle[0]);
+                    var region = FindRegion(triangle[0]);
                     regions[region].triangles.Add(index);
                 }
             }
 
-            void FindTriangleIntersections(Point[] triangle, int index)
+            private void FindTriangleIntersections(Point[] triangle, int index)
             {
                 // PLEASE NOTE:
                 // Handling of component comparison is tightly associated with the implementation 
@@ -262,11 +263,12 @@ namespace TriangleNet.Tools
                 //    pivot.x = triangle[0].x + t * (triangle[1].x - triangle[0].x)
                 //    pivot.y = triangle[0].y + t * (triangle[1].y - triangle[0].y)
 
-                int k = 2;
+                var k = 2;
 
                 double dx, dy;
+
                 // Iterate through all triangle laterals and find bounding box intersections
-                for (int i = 0; i < 3; k = i++)
+                for (var i = 0; i < 3; k = i++)
                 {
                     dx = triangle[i].x - triangle[k].x;
                     dy = triangle[i].y - triangle[k].y;
@@ -275,6 +277,7 @@ namespace TriangleNet.Tools
                     {
                         FindIntersectionsWithX(dx, dy, triangle, index, k);
                     }
+
                     if (dy != 0.0)
                     {
                         FindIntersectionsWithY(dx, dy, triangle, index, k);
@@ -282,16 +285,17 @@ namespace TriangleNet.Tools
                 }
             }
 
-            void FindIntersectionsWithX(double dx, double dy, Point[] triangle, int index, int k)
+            private void FindIntersectionsWithX(double dx, double dy, Point[] triangle, int index, int k)
             {
                 double t;
 
                 // find intersection with plane x = m_pivot.dX
                 t = (pivot.x - triangle[k].x) / dx;
-                if (t < (1 + EPS) && t > -EPS)
+
+                if (t < 1 + EPS && t > -EPS)
                 {
                     // we have an intersection
-                    double yComponent = triangle[k].y + t * dy;
+                    var yComponent = triangle[k].y + t * dy;
 
                     if (yComponent < pivot.y && yComponent >= bounds.Bottom)
                     {
@@ -307,10 +311,11 @@ namespace TriangleNet.Tools
 
                 // find intersection with plane x = m_boundingBox[0].dX
                 t = (bounds.Left - triangle[k].x) / dx;
-                if (t < (1 + EPS) && t > -EPS)
+
+                if (t < 1 + EPS && t > -EPS)
                 {
                     // we have an intersection
-                    double yComponent = triangle[k].y + t * dy;
+                    var yComponent = triangle[k].y + t * dy;
 
                     if (yComponent < pivot.y && yComponent >= bounds.Bottom)
                     {
@@ -324,10 +329,11 @@ namespace TriangleNet.Tools
 
                 // find intersection with plane x = m_boundingBox[1].dX
                 t = (bounds.Right - triangle[k].x) / dx;
-                if (t < (1 + EPS) && t > -EPS)
+
+                if (t < 1 + EPS && t > -EPS)
                 {
                     // we have an intersection
-                    double yComponent = triangle[k].y + t * dy;
+                    var yComponent = triangle[k].y + t * dy;
 
                     if (yComponent < pivot.y && yComponent >= bounds.Bottom)
                     {
@@ -340,13 +346,14 @@ namespace TriangleNet.Tools
                 }
             }
 
-            void FindIntersectionsWithY(double dx, double dy, Point[] triangle, int index, int k)
+            private void FindIntersectionsWithY(double dx, double dy, Point[] triangle, int index, int k)
             {
                 double t, xComponent;
 
                 // find intersection with plane y = m_pivot.dY
                 t = (pivot.y - triangle[k].y) / dy;
-                if (t < (1 + EPS) && t > -EPS)
+
+                if (t < 1 + EPS && t > -EPS)
                 {
                     // we have an intersection
                     xComponent = triangle[k].x + t * dx;
@@ -365,7 +372,8 @@ namespace TriangleNet.Tools
 
                 // find intersection with plane y = m_boundingBox[0].dY
                 t = (bounds.Bottom - triangle[k].y) / dy;
-                if (t < (1 + EPS) && t > -EPS)
+
+                if (t < 1 + EPS && t > -EPS)
                 {
                     // we have an intersection
                     xComponent = triangle[k].x + t * dx;
@@ -382,7 +390,8 @@ namespace TriangleNet.Tools
 
                 // find intersection with plane y = m_boundingBox[1].dY
                 t = (bounds.Top - triangle[k].y) / dy;
-                if (t < (1 + EPS) && t > -EPS)
+
+                if (t < 1 + EPS && t > -EPS)
                 {
                     // we have an intersection
                     xComponent = triangle[k].x + t * dx;
@@ -398,21 +407,24 @@ namespace TriangleNet.Tools
                 }
             }
 
-            int FindRegion(Point point)
+            private int FindRegion(Point point)
             {
-                int b = 2;
+                var b = 2;
+
                 if (point.y < pivot.y)
                 {
                     b = 0;
                 }
+
                 if (point.x > pivot.x)
                 {
                     b++;
                 }
+
                 return b;
             }
 
-            void AddToRegion(int index, int region)
+            private void AddToRegion(int index, int region)
             {
                 //if (!(m_bitRegions & BITVECTOR[region]))
                 if ((bitRegions & BITVECTOR[region]) == 0)

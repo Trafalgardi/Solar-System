@@ -4,13 +4,13 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+using TriangleNet.Meshing;
+using TriangleNet.Topology.DCEL;
+using TriangleNet.Voronoi;
+
 namespace TriangleNet.Smoothing
 {
-    using TriangleNet.Geometry;
-    using TriangleNet.Meshing;
-    using TriangleNet.Topology.DCEL;
-    using TriangleNet.Voronoi;
-
     /// <summary>
     /// Simple mesh smoother implementation.
     /// </summary>
@@ -20,12 +20,12 @@ namespace TriangleNet.Smoothing
     /// </remarks>
     public class SimpleSmoother : ISmoother
     {
-        TrianglePool pool;
-        Configuration config;
+        private readonly TrianglePool pool;
+        private readonly Configuration config;
 
-        IVoronoiFactory factory;
+        private readonly IVoronoiFactory factory;
 
-        ConstraintOptions options;
+        private readonly ConstraintOptions options;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SimpleSmoother" /> class.
@@ -41,13 +41,12 @@ namespace TriangleNet.Smoothing
         public SimpleSmoother(IVoronoiFactory factory)
         {
             this.factory = factory;
-            this.pool = new TrianglePool();
+            pool = new TrianglePool();
 
-            this.config = new Configuration(
-                () => RobustPredicates.Default,
+            config = new Configuration(() => RobustPredicates.Default,
                 () => pool.Restart());
 
-            this.options = new ConstraintOptions() { ConformingDelaunay = true };
+            options = new ConstraintOptions { ConformingDelaunay = true, };
         }
 
         /// <summary>
@@ -60,13 +59,10 @@ namespace TriangleNet.Smoothing
             this.factory = factory;
             this.config = config;
 
-            this.options = new ConstraintOptions() { ConformingDelaunay = true };
+            options = new ConstraintOptions { ConformingDelaunay = true, };
         }
 
-        public void Smooth(IMesh mesh)
-        {
-            Smooth(mesh, 10);
-        }
+        public void Smooth(IMesh mesh) => Smooth(mesh, limit: 10);
 
         public void Smooth(IMesh mesh, int limit)
         {
@@ -76,10 +72,10 @@ namespace TriangleNet.Smoothing
             var predicates = config.Predicates();
 
             // The smoother should respect the mesh segment splitting behavior.
-            this.options.SegmentSplitting = smoothedMesh.behavior.NoBisect;
+            options.SegmentSplitting = smoothedMesh.behavior.NoBisect;
 
             // Take a few smoothing rounds (Lloyd's algorithm).
-            for (int i = 0; i < limit; i++)
+            for (var i = 0; i < limit; i++)
             {
                 Step(smoothedMesh, factory, predicates);
 
@@ -135,7 +131,6 @@ namespace TriangleNet.Smoothing
                 ytmp += (q.y + p.y) * ai;
 
                 edge = edge.Next;
-
             } while (edge.Next.ID != first);
 
             x = xtmp / (3 * atmp);

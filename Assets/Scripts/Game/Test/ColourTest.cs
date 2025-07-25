@@ -1,39 +1,43 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 [ExecuteInEditMode]
-public class ColourTest : MonoBehaviour {
+public class ColourTest : MonoBehaviour
+{
+    private Material[] materials;
 
-	public MeshRenderer[] renderers;
+    public MeshRenderer[] renderers;
 
-	public Vector2 saturationMinMax;
-	public Vector2 valueMinMax;
-	public int seed;
-	Material[] materials;
+    public Vector2 saturationMinMax;
+    public Vector2 valueMinMax;
+    public int seed;
 
-	void Update () {
-		Process ();
-	}
+    public void Random()
+    {
+        seed = UnityEngine.Random.Range(minInclusive: -1000, maxExclusive: 1000);
+        Process();
+    }
 
-	public void Random () {
-		seed = UnityEngine.Random.Range (-1000, 1000);
-		Process ();
-	}
+    private void Update() => Process();
 
-	void Process () {
-		if (materials == null || materials.Length != renderers.Length) {
-			materials = new Material[renderers.Length];
-		}
+    private void Process()
+    {
+        if (materials == null || materials.Length != renderers.Length)
+        {
+            materials = new Material[renderers.Length];
+        }
 
-		var random = new PRNG (seed);
-		for (int i = 0; i < renderers.Length; i++) {
-			if (materials[i] == null) {
-				materials[i] = new Material (Shader.Find ("Unlit/Color"));
-			}
-			var col = ColourHelper.Random (random, saturationMinMax.x, saturationMinMax.y, valueMinMax.x, valueMinMax.y);
-			materials[i].color = col;
-			renderers[i].sharedMaterial = materials[i];
-		}
-	}
+        var random = new PRNG(seed);
+
+        for (var i = 0; i < renderers.Length; i++)
+        {
+            if (materials[i] == null)
+            {
+                materials[i] = new Material(Shader.Find(name: "Unlit/Color"));
+            }
+
+            var col = ColourHelper.Random(random, saturationMinMax.x, saturationMinMax.y, valueMinMax.x, valueMinMax.y);
+            materials[i].color = col;
+            renderers[i].sharedMaterial = materials[i];
+        }
+    }
 }

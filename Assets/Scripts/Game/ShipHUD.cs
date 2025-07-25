@@ -1,278 +1,343 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ShipHUD : MonoBehaviour {
+public class ShipHUD : MonoBehaviour
+{
+    private Camera cam;
+    private Transform camT;
+    private LockOnUI lockOnUI;
+    private Ship ship;
+    private CelestialBody aimedBody;
 
-	[Header ("Aim")]
-	public float dotSize = 1;
-	public float minAimAngle = 30;
-	public Image centreDot;
-	public TMPro.TMP_Text planetName;
-	public TMPro.TMP_Text planetInfo;
-	public Vector2 surfaceDstFadeOutRange = new Vector2 (300, 150);
+    private void Start()
+    {
+        // Need to draw UI AFTER floating origin updates, otherwise may flicker when origin changes
+        FindObjectOfType<EndlessManager>().PostFloatingOriginUpdate += UpdateUI;
 
-	[Header ("Velocity indicators")]
-	public VelocityIndicator velocityHorizontal;
-	public VelocityIndicator velocityVertical;
-	public Vector2 velocityIndicatorSizeMinMax;
-	public Vector2 velocityIndicatorThicknessMinMax;
-	public float maxVisDst;
-	public float velocityDisplayScale = 1;
-	public Material velocityIndicatorMat;
-	public Material arrowHeadMat;
+        velocityHorizontal.line.material = new Material(velocityIndicatorMat);
+        velocityHorizontal.head.material = new Material(arrowHeadMat);
+        velocityVertical.line.material = new Material(velocityIndicatorMat);
+        velocityVertical.head.material = new Material(arrowHeadMat);
+    }
 
-	CelestialBody lockedBody;
-	Camera cam;
-	Transform camT;
-	LockOnUI lockOnUI;
-	Ship ship;
-	CelestialBody aimedBody;
+    [Header(header: "Aim")] public float dotSize = 1;
 
-	void Start () {
-		// Need to draw UI AFTER floating origin updates, otherwise may flicker when origin changes
-		FindObjectOfType<EndlessManager> ().PostFloatingOriginUpdate += UpdateUI;
+    public float minAimAngle = 30;
+    public Image centreDot;
+    public TMP_Text planetName;
+    public TMP_Text planetInfo;
+    public Vector2 surfaceDstFadeOutRange = new(x: 300, y: 150);
 
-		velocityHorizontal.line.material = new Material (velocityIndicatorMat);
-		velocityHorizontal.head.material = new Material (arrowHeadMat);
-		velocityVertical.line.material = new Material (velocityIndicatorMat);
-		velocityVertical.head.material = new Material (arrowHeadMat);
-	}
+    [Header(header: "Velocity indicators")]
+    public VelocityIndicator velocityHorizontal;
 
-	void Init () {
-		if (cam == null) {
-			cam = Camera.main;
-		}
-		camT = cam.transform;
+    public VelocityIndicator velocityVertical;
+    public Vector2 velocityIndicatorSizeMinMax;
+    public Vector2 velocityIndicatorThicknessMinMax;
+    public float maxVisDst;
+    public float velocityDisplayScale = 1;
+    public Material velocityIndicatorMat;
+    public Material arrowHeadMat;
 
-		if (lockOnUI == null) {
-			lockOnUI = GetComponent<LockOnUI> ();
-		}
+    public CelestialBody LockedBody { get; private set; }
 
-		if (ship == null) {
-			ship = FindObjectOfType<Ship> ();
-		}
-	}
+    private void Init()
+    {
+        if (cam == null)
+        {
+            cam = Camera.main;
+        }
 
-	void UpdateUI () {
-		Init ();
+        camT = cam.transform;
 
-		centreDot.rectTransform.localScale = Vector3.one * dotSize;
+        if (lockOnUI == null)
+        {
+            lockOnUI = GetComponent<LockOnUI>();
+        }
 
-		if (ship.ShowHUD) {
+        if (ship == null)
+        {
+            ship = FindObjectOfType<Ship>();
+        }
+    }
 
-			if (Time.timeScale != 0) {
-				aimedBody = FindAimedBody ();
+    private void UpdateUI()
+    {
+        Init();
 
-				if (Input.GetMouseButtonDown (0)) {
-					if (lockedBody == aimedBody) {
-						lockedBody = null;
-					} else {
-						lockedBody = aimedBody;
-					}
-				}
-			}
+        centreDot.rectTransform.localScale = Vector3.one * dotSize;
 
-			if (aimedBody && aimedBody != lockedBody) {
-				lockOnUI.DrawLockOnUI (aimedBody, false);
-			}
+        if (ship.ShowHUD)
+        {
+            if (Time.timeScale != 0)
+            {
+                aimedBody = FindAimedBody();
 
-			if (lockedBody) {
-				lockOnUI.DrawLockOnUI (lockedBody, true);
-				DrawPlanetHUD (lockedBody);
-			} else {
-				SetHudActive (false);
-			}
-		} else {
-			lockedBody = null;
-			SetHudActive (false);
-		}
-	}
+                if (Input.GetMouseButtonDown(button: 0))
+                {
+                    if (LockedBody == aimedBody)
+                    {
+                        LockedBody = null;
+                    }
+                    else
+                    {
+                        LockedBody = aimedBody;
+                    }
+                }
+            }
 
-	void SetHudActive (bool active) {
-		planetName.gameObject.SetActive (active);
-		velocityHorizontal.SetActive (active);
-		velocityVertical.SetActive (active);
-	}
+            if (aimedBody && aimedBody != LockedBody)
+            {
+                lockOnUI.DrawLockOnUI(aimedBody, lockedOn: false);
+            }
 
-	void DrawPlanetHUD (CelestialBody planet) {
-		SetHudActive (true);
-		Vector3 dirToPlanet = (planet.transform.position - camT.position).normalized;
-		float dstToPlanetCentre = (planet.transform.position - camT.position).magnitude;
-		float dstToPlanetSurface = dstToPlanetCentre - planet.radius;
+            if (LockedBody)
+            {
+                lockOnUI.DrawLockOnUI(LockedBody, lockedOn: true);
+                DrawPlanetHUD(LockedBody);
+            }
+            else
+            {
+                SetHudActive(active: false);
+            }
+        }
+        else
+        {
+            LockedBody = null;
+            SetHudActive(active: false);
+        }
+    }
 
-		// Calculate horizontal/vertical axes relative to direction toward planet
-		Vector3 horizontal = Vector3.Cross (dirToPlanet, camT.up).normalized;
-		horizontal *= Mathf.Sign (Vector3.Dot (horizontal, camT.right)); // make sure roughly same direction as right vector of cam
-		Vector3 vertical = Vector3.Cross (dirToPlanet, horizontal).normalized;
-		vertical *= Mathf.Sign (Vector3.Dot (vertical, camT.up));
+    private void SetHudActive(bool active)
+    {
+        planetName.gameObject.SetActive(active);
+        velocityHorizontal.SetActive(active);
+        velocityVertical.SetActive(active);
+    }
 
-		// Calculate relative velocity
-		Vector3 relativeVelocityWorldSpace = ship.Rigidbody.linearVelocity - planet.velocity;
-		//Debug.Log(relativeVelocityWorldSpace +"   player: " + player.velocity + "  planet: " + planet.Velocity);
-		float vx = -Vector3.Dot (relativeVelocityWorldSpace, horizontal);
-		float vy = -Vector3.Dot (relativeVelocityWorldSpace, vertical);
-		float vz = Vector3.Dot (relativeVelocityWorldSpace, dirToPlanet);
-		Vector3 relativeVelocity = new Vector3 (vx, vy, vz);
+    private void DrawPlanetHUD(CelestialBody planet)
+    {
+        SetHudActive(active: true);
+        var dirToPlanet = (planet.transform.position - camT.position).normalized;
+        var dstToPlanetCentre = (planet.transform.position - camT.position).magnitude;
+        var dstToPlanetSurface = dstToPlanetCentre - planet.radius;
 
-		// Planet info
-		Vector3 planetInfoWorldPos = planet.transform.position + horizontal * planet.radius * lockOnUI.lockedRadiusMultiplier + vertical * planet.radius * 0.35f;
-		planetName.gameObject.SetActive (PointIsOnScreen (planetInfoWorldPos));
-		planetName.rectTransform.localPosition = CalculateUIPos (planetInfoWorldPos);
-		planetName.text = $"{planet.bodyName}";
-		planetInfo.text = $"{FormatDistance(dstToPlanetSurface)} \n{relativeVelocity.z:0}m/s";
+        // Calculate horizontal/vertical axes relative to direction toward planet
+        var horizontal = Vector3.Cross(dirToPlanet, camT.up).normalized;
 
-		float alpha = Mathf.InverseLerp (surfaceDstFadeOutRange.y, surfaceDstFadeOutRange.x, dstToPlanetSurface);
-		planetName.color = new Color (planetName.color.r, planetName.color.g, planetName.color.b, alpha);
-		planetInfo.color = new Color (planetInfo.color.r, planetInfo.color.g, planetInfo.color.b, alpha);
+        horizontal *=
+            Mathf.Sign(Vector3.Dot(horizontal, camT.right)); // make sure roughly same direction as right vector of cam
 
-		// Relative velocity lines
-		if (PointIsOnScreen (planet.transform.position)) {
-			float arrowHeadSizePercent = dstToPlanetSurface / maxVisDst;
-			//Debug.Log (arrowHeadSizePercent);
-			float arrowHeadSize = Mathf.Lerp (velocityIndicatorSizeMinMax.y, velocityIndicatorSizeMinMax.x, arrowHeadSizePercent);
-			float indicatorThickness = Mathf.Lerp (velocityIndicatorThicknessMinMax.y, velocityIndicatorThicknessMinMax.x, dstToPlanetSurface / maxVisDst);
-			float indicatorAngle = (relativeVelocity.x < 0) ? 180 : 0;
-			var indicatorPos = CalculateUIPos (planet.transform.position + horizontal * planet.radius * lockOnUI.lockedRadiusMultiplier * Mathf.Sign (relativeVelocity.x));
-			float indicatorMagnitude = Mathf.Abs (relativeVelocity.x) * velocityDisplayScale;
-			velocityHorizontal.Update (indicatorAngle, indicatorPos, indicatorMagnitude, arrowHeadSize, indicatorThickness);
+        var vertical = Vector3.Cross(dirToPlanet, horizontal).normalized;
+        vertical *= Mathf.Sign(Vector3.Dot(vertical, camT.up));
 
-			indicatorAngle = (relativeVelocity.y < 0) ? 270 : 90;
-			indicatorPos = CalculateUIPos (planet.transform.position + camT.up * planet.radius * lockOnUI.lockedRadiusMultiplier * Mathf.Sign (relativeVelocity.y));
-			indicatorMagnitude = Mathf.Abs (relativeVelocity.y) * velocityDisplayScale;
-			velocityVertical.Update (indicatorAngle, indicatorPos, indicatorMagnitude, arrowHeadSize, indicatorThickness);
+        // Calculate relative velocity
+        var relativeVelocityWorldSpace = ship.Rigidbody.linearVelocity - planet.velocity;
+        //Debug.Log(relativeVelocityWorldSpace +"   player: " + player.velocity + "  planet: " + planet.Velocity);
+        var vx = -Vector3.Dot(relativeVelocityWorldSpace, horizontal);
+        var vy = -Vector3.Dot(relativeVelocityWorldSpace, vertical);
+        var vz = Vector3.Dot(relativeVelocityWorldSpace, dirToPlanet);
+        var relativeVelocity = new Vector3(vx, vy, vz);
 
-		} else {
-			velocityHorizontal.SetActive (false);
-			velocityVertical.SetActive (false);
-		}
+        // Planet info
+        var planetInfoWorldPos = planet.transform.position +
+                                 horizontal * planet.radius * lockOnUI.lockedRadiusMultiplier +
+                                 vertical * planet.radius * 0.35f;
 
-	}
+        planetName.gameObject.SetActive(PointIsOnScreen(planetInfoWorldPos));
+        planetName.rectTransform.localPosition = CalculateUIPos(planetInfoWorldPos);
+        planetName.text = $"{planet.bodyName}";
+        planetInfo.text = $"{FormatDistance(dstToPlanetSurface)} \n{relativeVelocity.z:0}m/s";
 
-	CelestialBody FindAimedBody () {
-		CelestialBody[] bodies = FindObjectsOfType<CelestialBody> ();
-		CelestialBody aimedBody = null;
+        var alpha = Mathf.InverseLerp(surfaceDstFadeOutRange.y, surfaceDstFadeOutRange.x, dstToPlanetSurface);
+        planetName.color = new Color(planetName.color.r, planetName.color.g, planetName.color.b, alpha);
+        planetInfo.color = new Color(planetInfo.color.r, planetInfo.color.g, planetInfo.color.b, alpha);
 
-		Vector3 viewForward = cam.transform.forward;
-		Vector3 viewOrigin = cam.transform.position;
+        // Relative velocity lines
+        if (PointIsOnScreen(planet.transform.position))
+        {
+            var arrowHeadSizePercent = dstToPlanetSurface / maxVisDst;
 
-		float nearestSqrDst = float.PositiveInfinity;
+            //Debug.Log (arrowHeadSizePercent);
+            var arrowHeadSize = Mathf.Lerp(velocityIndicatorSizeMinMax.y, velocityIndicatorSizeMinMax.x,
+                arrowHeadSizePercent);
 
-		// If aimed directly at any body, return the closest one
-		foreach (var body in bodies) {
-			Vector3 intersection;
-			if (MathUtility.RaySphere (body.transform.position, body.radius, viewOrigin, viewForward, out intersection)) {
-				float sqrDst = (viewOrigin - intersection).sqrMagnitude;
-				if (sqrDst < nearestSqrDst) {
-					nearestSqrDst = sqrDst;
-					aimedBody = body;
-				}
-			}
-		}
+            var indicatorThickness = Mathf.Lerp(velocityIndicatorThicknessMinMax.y, velocityIndicatorThicknessMinMax.x,
+                dstToPlanetSurface / maxVisDst);
 
-		if (aimedBody) {
-			return aimedBody;
-		}
+            float indicatorAngle = relativeVelocity.x < 0 ? 180 : 0;
 
-		// Return body with min angle to view direction
-		float minAngle = minAimAngle * Mathf.Deg2Rad;
+            var indicatorPos = CalculateUIPos(planet.transform.position +
+                                              horizontal *
+                                              planet.radius *
+                                              lockOnUI.lockedRadiusMultiplier *
+                                              Mathf.Sign(relativeVelocity.x));
 
-		foreach (var body in bodies) {
-			Vector3 offsetToBody = body.transform.position - cam.transform.position;
-			float dstToBody = offsetToBody.magnitude;
-			/*
-			Vector3 viewPointNearPlanet = viewOrigin + viewForward * dstToBody;
-			Vector3 closestSurfacePoint = body.transform.position + (viewPointNearPlanet - body.transform.position).normalized * body.radius;
-			Vector3 dirToClosestSurfacePoint = (closestSurfacePoint - viewOrigin).normalized;
-			float cosAngleToSurface = Vector3.Dot (dirToClosestSurfacePoint, viewForward);
-			float aimAngle = Mathf.Acos (cosAngleToSurface);
-			*/
-			float aimAngle = Mathf.Acos (Vector3.Dot (viewForward, offsetToBody.normalized));
+            var indicatorMagnitude = Mathf.Abs(relativeVelocity.x) * velocityDisplayScale;
 
-			if (aimAngle < minAngle) {
-				minAngle = aimAngle;
-				aimedBody = body;
-			}
-		}
+            velocityHorizontal.Update(indicatorAngle, indicatorPos, indicatorMagnitude, arrowHeadSize,
+                indicatorThickness);
 
-		return aimedBody;
-	}
+            indicatorAngle = relativeVelocity.y < 0 ? 270 : 90;
 
-	bool PointIsOnScreen (Vector3 worldPoint) {
-		Vector3 p = cam.WorldToViewportPoint (worldPoint);
-		return p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1 && p.z > 0;
-	}
+            indicatorPos = CalculateUIPos(planet.transform.position +
+                                          camT.up *
+                                          planet.radius *
+                                          lockOnUI.lockedRadiusMultiplier *
+                                          Mathf.Sign(relativeVelocity.y));
 
-	static string FormatDistance (float distance) {
-		const int maxMetreDst = 1000;
-		string dstString = (distance < maxMetreDst) ? (int) distance + "m" : $"{distance/1000:0}km";
-		return dstString;
-	}
+            indicatorMagnitude = Mathf.Abs(relativeVelocity.y) * velocityDisplayScale;
 
-	Vector3 CalculateRelativeVelocity (CelestialBody body) {
-		Vector3 dirToBody = (body.transform.position - camT.position).normalized;
-		Vector3 relativeVelocityWorldSpace = ship.Rigidbody.linearVelocity - body.velocity;
+            velocityVertical.Update(indicatorAngle, indicatorPos, indicatorMagnitude, arrowHeadSize,
+                indicatorThickness);
+        }
+        else
+        {
+            velocityHorizontal.SetActive(active: false);
+            velocityVertical.SetActive(active: false);
+        }
+    }
 
-		// Calculate horizontal/vertical axes relative to direction toward planet
-		Vector3 horizontal = Vector3.Cross (dirToBody, camT.up).normalized;
-		horizontal *= Mathf.Sign (Vector3.Dot (horizontal, camT.right)); // make sure roughly same direction as right vector of cam
-		Vector3 vertical = Vector3.Cross (dirToBody, horizontal).normalized;
-		vertical *= Mathf.Sign (Vector3.Dot (vertical, camT.up));
+    private CelestialBody FindAimedBody()
+    {
+        var bodies = FindObjectsOfType<CelestialBody>();
+        CelestialBody aimedBody = null;
 
-		float vx = -Vector3.Dot (relativeVelocityWorldSpace, horizontal);
-		float vy = -Vector3.Dot (relativeVelocityWorldSpace, vertical);
-		float vz = Vector3.Dot (relativeVelocityWorldSpace, dirToBody);
-		Vector3 relativeV = new Vector3 (vx, vy, vz);
+        var viewForward = cam.transform.forward;
+        var viewOrigin = cam.transform.position;
 
-		// Debug.Log ($"Rel world: {relativeVelocityWorldSpace} rel: {relativeV} speed world: {relativeVelocityWorldSpace.magnitude} speed rel: {relativeV.magnitude}");
+        var nearestSqrDst = float.PositiveInfinity;
 
-		return relativeV;
-	}
+        // If aimed directly at any body, return the closest one
+        foreach (var body in bodies)
+        {
+            Vector3 intersection;
 
-	Vector2 CalculateUIPos (Vector3 worldPos) {
-		const int referenceWidth = 1920;
-		const int referenceHeight = 1080;
+            if (MathUtility.RaySphere(body.transform.position, body.radius, viewOrigin, viewForward, out intersection))
+            {
+                var sqrDst = (viewOrigin - intersection).sqrMagnitude;
 
-		Vector3 viewportCentre = cam.WorldToViewportPoint (worldPos);
-		if (viewportCentre.z <= 0) {
-			viewportCentre.x = (viewportCentre.x <= 0.5f) ? 1 : 0;
-			viewportCentre.y = (viewportCentre.y <= 0.5f) ? 1 : 0;
-		}
-		//screenCentre = new Vector2 (screenCentre.x / Screen.width, screenCentre.y / Screen.height);
+                if (sqrDst < nearestSqrDst)
+                {
+                    nearestSqrDst = sqrDst;
+                    aimedBody = body;
+                }
+            }
+        }
 
-		return new Vector2 ((viewportCentre.x - 0.5f) * referenceWidth, (viewportCentre.y - 0.5f) * referenceHeight);
-	}
+        if (aimedBody)
+        {
+            return aimedBody;
+        }
 
-	public CelestialBody LockedBody {
-		get {
-			return lockedBody;
-		}
-	}
+        // Return body with min angle to view direction
+        var minAngle = minAimAngle * Mathf.Deg2Rad;
 
-	[System.Serializable]
-	public struct VelocityIndicator {
-		public Image line;
-		public Image head;
+        foreach (var body in bodies)
+        {
+            var offsetToBody = body.transform.position - cam.transform.position;
+            var dstToBody = offsetToBody.magnitude;
+            /*
+            Vector3 viewPointNearPlanet = viewOrigin + viewForward * dstToBody;
+            Vector3 closestSurfacePoint = body.transform.position + (viewPointNearPlanet - body.transform.position).normalized * body.radius;
+            Vector3 dirToClosestSurfacePoint = (closestSurfacePoint - viewOrigin).normalized;
+            float cosAngleToSurface = Vector3.Dot (dirToClosestSurfacePoint, viewForward);
+            float aimAngle = Mathf.Acos (cosAngleToSurface);
+            */
+            var aimAngle = Mathf.Acos(Vector3.Dot(viewForward, offsetToBody.normalized));
 
-		public void Update (float angle, Vector2 pos, float magnitude, float arrowHeadSize, float thickness) {
-			line.rectTransform.pivot = new Vector2 (0, 0.5f);
-			line.rectTransform.eulerAngles = Vector3.forward * angle;
-			line.rectTransform.localPosition = pos;
-			line.rectTransform.sizeDelta = new Vector2 (magnitude, thickness);
-			line.material.SetVector ("_Size", line.rectTransform.sizeDelta);
-			head.material.SetVector ("_Size", line.rectTransform.sizeDelta);
+            if (aimAngle < minAngle)
+            {
+                minAngle = aimAngle;
+                aimedBody = body;
+            }
+        }
 
-			head.rectTransform.localPosition = pos + (Vector2) line.rectTransform.right * magnitude;
-			head.rectTransform.eulerAngles = Vector3.forward * angle;
+        return aimedBody;
+    }
 
-			head.rectTransform.localScale = Vector3.one * arrowHeadSize;
-		}
+    private bool PointIsOnScreen(Vector3 worldPoint)
+    {
+        var p = cam.WorldToViewportPoint(worldPoint);
 
-		public void SetActive (bool active) {
-			line.gameObject.SetActive (active);
-			head.gameObject.SetActive (active);
-		}
-	}
+        return p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1 && p.z > 0;
+    }
+
+    private static string FormatDistance(float distance)
+    {
+        const int maxMetreDst = 1000;
+        var dstString = distance < maxMetreDst ? (int)distance + "m" : $"{distance / 1000:0}km";
+
+        return dstString;
+    }
+
+    private Vector3 CalculateRelativeVelocity(CelestialBody body)
+    {
+        var dirToBody = (body.transform.position - camT.position).normalized;
+        var relativeVelocityWorldSpace = ship.Rigidbody.linearVelocity - body.velocity;
+
+        // Calculate horizontal/vertical axes relative to direction toward planet
+        var horizontal = Vector3.Cross(dirToBody, camT.up).normalized;
+
+        horizontal *=
+            Mathf.Sign(Vector3.Dot(horizontal, camT.right)); // make sure roughly same direction as right vector of cam
+
+        var vertical = Vector3.Cross(dirToBody, horizontal).normalized;
+        vertical *= Mathf.Sign(Vector3.Dot(vertical, camT.up));
+
+        var vx = -Vector3.Dot(relativeVelocityWorldSpace, horizontal);
+        var vy = -Vector3.Dot(relativeVelocityWorldSpace, vertical);
+        var vz = Vector3.Dot(relativeVelocityWorldSpace, dirToBody);
+        var relativeV = new Vector3(vx, vy, vz);
+
+        // Debug.Log ($"Rel world: {relativeVelocityWorldSpace} rel: {relativeV} speed world: {relativeVelocityWorldSpace.magnitude} speed rel: {relativeV.magnitude}");
+
+        return relativeV;
+    }
+
+    private Vector2 CalculateUIPos(Vector3 worldPos)
+    {
+        const int referenceWidth = 1920;
+        const int referenceHeight = 1080;
+
+        var viewportCentre = cam.WorldToViewportPoint(worldPos);
+
+        if (viewportCentre.z <= 0)
+        {
+            viewportCentre.x = viewportCentre.x <= 0.5f ? 1 : 0;
+            viewportCentre.y = viewportCentre.y <= 0.5f ? 1 : 0;
+        }
+        //screenCentre = new Vector2 (screenCentre.x / Screen.width, screenCentre.y / Screen.height);
+
+        return new Vector2((viewportCentre.x - 0.5f) * referenceWidth, (viewportCentre.y - 0.5f) * referenceHeight);
+    }
+
+    [System.Serializable]
+    public struct VelocityIndicator
+    {
+        public Image line;
+        public Image head;
+
+        public void Update(float angle, Vector2 pos, float magnitude, float arrowHeadSize, float thickness)
+        {
+            line.rectTransform.pivot = new Vector2(x: 0, y: 0.5f);
+            line.rectTransform.eulerAngles = Vector3.forward * angle;
+            line.rectTransform.localPosition = pos;
+            line.rectTransform.sizeDelta = new Vector2(magnitude, thickness);
+            line.material.SetVector(name: "_Size", line.rectTransform.sizeDelta);
+            head.material.SetVector(name: "_Size", line.rectTransform.sizeDelta);
+
+            head.rectTransform.localPosition = pos + (Vector2)line.rectTransform.right * magnitude;
+            head.rectTransform.eulerAngles = Vector3.forward * angle;
+
+            head.rectTransform.localScale = Vector3.one * arrowHeadSize;
+        }
+
+        public void SetActive(bool active)
+        {
+            line.gameObject.SetActive(active);
+            head.gameObject.SetActive(active);
+        }
+    }
 }

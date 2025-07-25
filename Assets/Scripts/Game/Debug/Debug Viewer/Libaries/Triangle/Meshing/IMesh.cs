@@ -1,10 +1,9 @@
-﻿
+﻿using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Meshing
 {
-    using System.Collections.Generic;
-    using TriangleNet.Topology;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// Mesh interface.
     /// </summary>

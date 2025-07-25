@@ -1,9 +1,7 @@
-﻿
+﻿using TriangleNet.Topology.DCEL;
+
 namespace TriangleNet.Voronoi
 {
-    using System;
-    using TriangleNet.Topology.DCEL;
-
     /// <summary>
     /// Default factory for Voronoi / DCEL mesh objects.
     /// </summary>
@@ -17,19 +15,10 @@ namespace TriangleNet.Voronoi
         {
         }
 
-        public Vertex CreateVertex(double x, double y)
-        {
-            return new Vertex(x, y);
-        }
+        public Vertex CreateVertex(double x, double y) => new(x, y);
 
-        public HalfEdge CreateHalfEdge(Vertex origin, Face face)
-        {
-            return new HalfEdge(origin, face);
-        }
+        public HalfEdge CreateHalfEdge(Vertex origin, Face face) => new(origin, face);
 
-        public Face CreateFace(Geometry.Vertex vertex)
-        {
-            return new Face(vertex);
-        }
+        public Face CreateFace(Geometry.Vertex vertex) => new(vertex);
     }
 }

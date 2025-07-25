@@ -4,23 +4,12 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+
 namespace TriangleNet.Topology.DCEL
 {
-    using System.Collections.Generic;
-
-    public class Vertex : TriangleNet.Geometry.Point
+    public class Vertex : Geometry.Point
     {
-        internal HalfEdge leaving;
-
-        /// <summary>
-        /// Gets or sets a half-edge leaving the vertex.
-        /// </summary>
-        public HalfEdge Leaving
-        {
-            get { return leaving; }
-            set { leaving = value; }
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="Vertex" /> class.
         /// </summary>
@@ -44,13 +33,22 @@ namespace TriangleNet.Topology.DCEL
         }
 
         /// <summary>
+        /// Gets or sets a half-edge leaving the vertex.
+        /// </summary>
+        public HalfEdge Leaving
+        {
+            get => leaving;
+            set => leaving = value;
+        }
+
+        /// <summary>
         /// Enumerates all half-edges leaving this vertex.
         /// </summary>
         /// <returns></returns>
         public IEnumerable<HalfEdge> EnumerateEdges()
         {
-            var edge = this.Leaving;
-            int first = edge.ID;
+            var edge = Leaving;
+            var first = edge.ID;
 
             do
             {
@@ -60,9 +58,7 @@ namespace TriangleNet.Topology.DCEL
             } while (edge.ID != first);
         }
 
-        public override string ToString()
-        {
-            return string.Format("V-ID {0}", base.id);
-        }
+        public override string ToString() => string.Format(format: "V-ID {0}", id);
+        internal HalfEdge leaving;
     }
 }

@@ -5,30 +5,30 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using TriangleNet.Topology;
+
 namespace TriangleNet
 {
-    using System;
-    using System.Collections.Generic;
-    using TriangleNet.Topology;
-
     /// <summary>
     /// Used for triangle sampling in the <see cref="TriangleLocator"/> class.
     /// </summary>
-    class TriangleSampler : IEnumerable<Triangle>
+    internal class TriangleSampler : IEnumerable<Triangle>
     {
         private const int RANDOM_SEED = 110503;
 
         // Empirically chosen factor.
         private const int samplefactor = 11;
 
-        private Random random;
-        private Mesh mesh;
+        private readonly Random random;
+        private readonly Mesh mesh;
 
         // Number of random samples for point location (at least 1).
         private int samples = 1;
 
         // Number of triangles in mesh.
-        private int triangleCount = 0;
+        private int triangleCount;
 
         public TriangleSampler(Mesh mesh)
             : this(mesh, new Random(RANDOM_SEED))
@@ -46,8 +46,8 @@ namespace TriangleNet
         /// </summary>
         public void Reset()
         {
-            this.samples = 1;
-            this.triangleCount = 0;
+            samples = 1;
+            triangleCount = 0;
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace TriangleNet
         /// </summary>
         public void Update()
         {
-            int count = mesh.triangles.Count;
+            var count = mesh.triangles.Count;
 
             if (triangleCount != count)
             {
@@ -72,14 +72,8 @@ namespace TriangleNet
             }
         }
 
-        public IEnumerator<Triangle> GetEnumerator()
-        {
-            return mesh.triangles.Sample(samples, random).GetEnumerator();
-        }
+        public IEnumerator<Triangle> GetEnumerator() => mesh.triangles.Sample(samples, random).GetEnumerator();
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

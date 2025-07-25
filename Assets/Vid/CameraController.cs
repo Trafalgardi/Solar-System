@@ -1,69 +1,76 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class CameraController : MonoBehaviour {
+public class CameraController : MonoBehaviour
+{
+    // Rotation state
+    private Vector2 rotInput;
 
-	public Transform pivot;
+    // Zoom state
+    private float targetZoomDst;
+    private float currentZoomDst;
 
-	[Header ("Rotation (alt-drag)")]
-	public float rotSpeed = 6;
-	public float rotSmoothing = 10;
+    private void Start()
+    {
+        rotInput = transform.eulerAngles;
+        targetZoomDst = (transform.position - pivot.position).magnitude;
+        currentZoomDst = targetZoomDst;
+    }
 
-	[Header ("Zoom - (alt-ctrl-drag)")]
-	public float zoomSpeed = 6;
-	public float zoomSmoothing = 10;
+    public Transform pivot;
 
-	// Rotation state
-	Vector2 rotInput;
+    [Header(header: "Rotation (alt-drag)")]
+    public float rotSpeed = 6;
 
-	// Zoom state
-	float targetZoomDst;
-	float currentZoomDst;
+    public float rotSmoothing = 10;
 
-	void Start () {
-		rotInput = (Vector2) transform.eulerAngles;
-		targetZoomDst = (transform.position - pivot.position).magnitude;
-		currentZoomDst = targetZoomDst;
-	}
+    [Header(header: "Zoom - (alt-ctrl-drag)")]
+    public float zoomSpeed = 6;
 
-	void LateUpdate () {
-		if (Input.GetKey (KeyCode.LeftAlt) && Input.GetMouseButton (0)) {
-			Vector2 mouseInput = new Vector2 (Input.GetAxisRaw ("Mouse X"), Input.GetAxisRaw ("Mouse Y"));
+    public float zoomSmoothing = 10;
 
-			if (Input.GetKey (KeyCode.LeftControl)) {
-				HandleZoomInput (mouseInput);
-			} else {
-				HandleRotationInput (mouseInput);
-			}
-		}
+    private void LateUpdate()
+    {
+        if (Input.GetKey(KeyCode.LeftAlt) && Input.GetMouseButton(button: 0))
+        {
+            var mouseInput = new Vector2(Input.GetAxisRaw(axisName: "Mouse X"), Input.GetAxisRaw(axisName: "Mouse Y"));
 
-		UpdateRotation ();
-		UpdateZoom ();
-	}
+            if (Input.GetKey(KeyCode.LeftControl))
+            {
+                HandleZoomInput(mouseInput);
+            }
+            else
+            {
+                HandleRotationInput(mouseInput);
+            }
+        }
 
-	void HandleRotationInput (Vector2 mouseInput) {
-		rotInput += new Vector2 (-mouseInput.y, mouseInput.x) * rotSpeed;
+        UpdateRotation();
+        UpdateZoom();
+    }
 
-	}
+    private void HandleRotationInput(Vector2 mouseInput)
+        => rotInput += new Vector2(-mouseInput.y, mouseInput.x) * rotSpeed;
 
-	void UpdateRotation () {
-		Quaternion targetRot = Quaternion.Euler (rotInput.x, rotInput.y, 0);
-		Quaternion rotation = Quaternion.Slerp (transform.rotation, targetRot, Time.deltaTime * rotSmoothing);
-		Vector3 position = rotation * Vector3.forward * -(pivot.position - transform.position).magnitude + pivot.position;
+    private void UpdateRotation()
+    {
+        var targetRot = Quaternion.Euler(rotInput.x, rotInput.y, z: 0);
+        var rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotSmoothing);
+        var position = rotation * Vector3.forward * -(pivot.position - transform.position).magnitude + pivot.position;
 
-		transform.rotation = rotation;
-		transform.position = position;
-	}
+        transform.rotation = rotation;
+        transform.position = position;
+    }
 
-	void HandleZoomInput (Vector2 mouseInput) {
-		float zoomDir = -Mathf.Sign (mouseInput.x);
-		targetZoomDst += mouseInput.magnitude * zoomSpeed * zoomDir;
-	}
+    private void HandleZoomInput(Vector2 mouseInput)
+    {
+        var zoomDir = -Mathf.Sign(mouseInput.x);
+        targetZoomDst += mouseInput.magnitude * zoomSpeed * zoomDir;
+    }
 
-	void UpdateZoom () {
-		currentZoomDst = Mathf.Lerp (currentZoomDst, targetZoomDst, Time.deltaTime * zoomSmoothing);
-		Vector3 dirToPivot = (pivot.transform.position - transform.position).normalized;
-		transform.position = pivot.transform.position - dirToPivot * currentZoomDst;
-	}
+    private void UpdateZoom()
+    {
+        currentZoomDst = Mathf.Lerp(currentZoomDst, targetZoomDst, Time.deltaTime * zoomSmoothing);
+        var dirToPivot = (pivot.transform.position - transform.position).normalized;
+        transform.position = pivot.transform.position - dirToPivot * currentZoomDst;
+    }
 }

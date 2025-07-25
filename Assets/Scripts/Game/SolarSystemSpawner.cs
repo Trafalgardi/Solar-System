@@ -1,46 +1,42 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class SolarSystemSpawner : MonoBehaviour {
+public class SolarSystemSpawner : MonoBehaviour
+{
+    private void Awake() => Spawn(seed: 0);
 
-	public CelestialBodyGenerator.ResolutionSettings resolutionSettings;
+    public CelestialBodyGenerator.ResolutionSettings resolutionSettings;
 
-	void Awake () {
-		Spawn (0);
-	}
+    public void Spawn(int seed)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
 
-	public void Spawn (int seed) {
+        var prng = new PRNG(seed);
+        var bodies = FindObjectsOfType<CelestialBody>();
 
-		var sw = System.Diagnostics.Stopwatch.StartNew ();
+        foreach (var body in bodies)
+        {
+            if (body.bodyType == CelestialBody.BodyType.Sun)
+            {
+                continue;
+            }
 
-		PRNG prng = new PRNG (seed);
-		CelestialBody[] bodies = FindObjectsOfType<CelestialBody> ();
+            var placeholder = body.gameObject.GetComponentInChildren<BodyPlaceholder>();
+            var template = placeholder.bodySettings;
 
-		foreach (var body in bodies) {
-			if (body.bodyType == CelestialBody.BodyType.Sun) {
-				continue;
-			}
+            Destroy(placeholder.gameObject);
 
-			BodyPlaceholder placeholder = body.gameObject.GetComponentInChildren<BodyPlaceholder> ();
-			var template = placeholder.bodySettings;
+            var holder = new GameObject(name: "Body Generator");
+            var generator = holder.AddComponent<CelestialBodyGenerator>();
+            generator.transform.parent = body.transform;
+            generator.gameObject.layer = body.gameObject.layer;
+            generator.transform.localRotation = Quaternion.identity;
+            generator.transform.localPosition = Vector3.zero;
+            generator.transform.localScale = Vector3.one * body.radius;
+            generator.resolutionSettings = resolutionSettings;
 
-			Destroy (placeholder.gameObject);
+            generator.body = template;
+        }
 
-			GameObject holder = new GameObject ("Body Generator");
-			var generator = holder.AddComponent<CelestialBodyGenerator> ();
-			generator.transform.parent = body.transform;
-			generator.gameObject.layer = body.gameObject.layer;
-			generator.transform.localRotation = Quaternion.identity;
-			generator.transform.localPosition = Vector3.zero;
-			generator.transform.localScale = Vector3.one * body.radius;
-			generator.resolutionSettings = resolutionSettings;
-
-			generator.body = template;
-
-		}
-
-		Debug.Log ("Generation time: " + sw.ElapsedMilliseconds + " ms.");
-	}
-
+        Debug.Log("Generation time: " + sw.ElapsedMilliseconds + " ms.");
+    }
 }

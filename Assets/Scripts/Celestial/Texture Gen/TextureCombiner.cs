@@ -1,18 +1,17 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class TextureCombiner : MonoBehaviour {
+public class TextureCombiner : MonoBehaviour
+{
     public Texture2D red;
     public Texture2D green;
     public Texture2D blue;
     public Texture2D alpha;
 
-    void Update () {
-
+    public void SaveTexture(string path)
+    {
     }
 
-    public void SaveTexture (string path) {
-
+    private void Update()
+    {
     }
 }

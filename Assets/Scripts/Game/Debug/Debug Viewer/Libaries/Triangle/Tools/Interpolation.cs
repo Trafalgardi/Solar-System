@@ -1,11 +1,8 @@
-﻿
-namespace TriangleNet.Tools
+﻿namespace TriangleNet.Tools
 {
-    using TriangleNet.Geometry;
-
     public static class Interpolation
     {
-#if USE_ATTRIBS
+        #if USE_ATTRIBS
         /// <summary>
         /// Linear interpolation of vertex attributes.
         /// </summary>
@@ -55,9 +52,9 @@ namespace TriangleNet.Tools
                     + eta * (apex.attributes[i] - org.attributes[i]);
             }
         }
-#endif
+        #endif
 
-#if USE_Z
+        #if USE_Z
         /// <summary>
         /// Linear interpolation of a scalar value.
         /// </summary>
@@ -100,6 +97,6 @@ namespace TriangleNet.Tools
 
             p.z = org.z + xi * (dest.z - org.z) + eta * (apex.z - org.z);
         }
-#endif
+        #endif
     }
 }

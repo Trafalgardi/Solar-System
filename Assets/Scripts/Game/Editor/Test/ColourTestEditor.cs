@@ -1,15 +1,16 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 
-[CustomEditor (typeof (ColourTest))]
-public class ColourTestEditor : Editor {
-	public override void OnInspectorGUI () {
-		DrawDefaultInspector ();
+[CustomEditor(typeof(ColourTest))]
+public class ColourTestEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        DrawDefaultInspector();
 
-		if (GUILayout.Button ("Random")) {
-			((ColourTest) target).Random ();
-		}
-	}
+        if (GUILayout.Button(text: "Random"))
+        {
+            ((ColourTest)target).Random();
+        }
+    }
 }

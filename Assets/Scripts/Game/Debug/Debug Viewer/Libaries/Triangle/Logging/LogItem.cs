@@ -4,50 +4,34 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+
 namespace TriangleNet.Logging
 {
-    using System;
-
     /// <summary>
     /// Represents an item stored in the log.
     /// </summary>
     public class LogItem : ILogItem
     {
-        DateTime time;
-        LogLevel level;
-        string message;
-        string info;
-
-        public DateTime Time
-        {
-            get { return time; }
-        }
-
-        public LogLevel Level
-        {
-            get { return level; }
-        }
-
-        public string Message
-        {
-            get { return message; }
-        }
-
-        public string Info
-        {
-            get { return info; }
-        }
-
         public LogItem(LogLevel level, string message)
-            : this(level, message, "")
-        { }
+            : this(level, message, info: "")
+        {
+        }
 
         public LogItem(LogLevel level, string message, string info)
         {
-            this.time = DateTime.Now;
-            this.level = level;
-            this.message = message;
-            this.info = info;
+            Time = DateTime.Now;
+            this.Level = level;
+            this.Message = message;
+            this.Info = info;
         }
+
+        public DateTime Time { get; }
+
+        public LogLevel Level { get; }
+
+        public string Message { get; }
+
+        public string Info { get; }
     }
 }

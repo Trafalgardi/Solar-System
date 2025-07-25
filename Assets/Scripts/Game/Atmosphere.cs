@@ -1,69 +1,67 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-[ExecuteInEditMode, ImageEffectAllowedInSceneView]
-public class Atmosphere : CustomImageEffect {
+[ExecuteInEditMode]
+[ImageEffectAllowedInSceneView]
+public class Atmosphere : CustomImageEffect
+{
+    private ComputeBuffer buffer;
+    private Texture2D falloffTex;
 
-	public CelestialBodyGenerator planet;
-	[Range (0, 1)]
-	public float atmosphereScale = 0.2f;
+    public CelestialBodyGenerator planet;
 
-	public Color color;
-	public Vector4 testParams;
-	ComputeBuffer buffer;
-	Texture2D falloffTex;
-	public Gradient falloff;
-	public int gradientRes = 10;
-	public int numSteps = 10;
-	public Texture2D blueNoise;
+    [Range(min: 0, max: 1)] public float atmosphereScale = 0.2f;
 
-	public struct Sphere {
-		public Vector3 centre;
-		public float radius;
-		public float waterRadius;
+    public Color color;
+    public Vector4 testParams;
+    public Gradient falloff;
+    public int gradientRes = 10;
+    public int numSteps = 10;
+    public Texture2D blueNoise;
 
-		public static int Size {
-			get {
-				return sizeof (float) * 5;
-			}
-		}
-	}
+    public override Material GetMaterial()
+    {
+        // Validate inputs
+        if (material == null || material.shader != shader)
+        {
+            if (shader == null)
+            {
+                shader = Shader.Find(name: "Unlit/Texture");
+            }
 
-	public override Material GetMaterial () {
+            material = new Material(shader);
+        }
 
-		// Validate inputs
-		if (material == null || material.shader != shader) {
-			if (shader == null) {
-				shader = Shader.Find ("Unlit/Texture");
-			}
-			material = new Material (shader);
-		}
+        // Set
+        var sphere = new Sphere
+        {
+            centre = planet.transform.position,
+            radius = (1 + atmosphereScale) * planet.BodyScale,
+            waterRadius = planet.GetOceanRadius(),
+        };
 
-		// Set
-		Sphere sphere = new Sphere () {
-			centre = planet.transform.position,
-			radius = (1 + atmosphereScale) * planet.BodyScale,
-			waterRadius = planet.GetOceanRadius()
-		};
+        buffer = new ComputeBuffer(count: 1, Sphere.Size);
+        buffer.SetData(new[] { sphere, });
+        material.SetBuffer(name: "spheres", buffer);
+        material.SetVector(name: "params", testParams);
+        material.SetColor(name: "_Color", color);
+        material.SetFloat(name: "planetRadius", planet.BodyScale);
 
-		buffer = new ComputeBuffer (1, Sphere.Size);
-		buffer.SetData (new Sphere[] { sphere });
-		material.SetBuffer ("spheres", buffer);
-		material.SetVector ("params", testParams);
-		material.SetColor ("_Color", color);
-		material.SetFloat ("planetRadius", planet.BodyScale);
+        CelestialBodyShading.TextureFromGradient(ref falloffTex, gradientRes, falloff);
+        material.SetTexture(name: "_Falloff", falloffTex);
+        material.SetTexture(name: "_BlueNoise", blueNoise);
+        material.SetInt(name: "numSteps", numSteps);
 
-		CelestialBodyShading.TextureFromGradient (ref falloffTex, gradientRes, falloff);
-		material.SetTexture ("_Falloff", falloffTex);
-		material.SetTexture ("_BlueNoise", blueNoise);
-		material.SetInt ("numSteps", numSteps);
-		return material;
-	}
+        return material;
+    }
 
-	public override void Release () {
-		buffer.Release ();
-	}
+    public override void Release() => buffer.Release();
 
+    public struct Sphere
+    {
+        public Vector3 centre;
+        public float radius;
+        public float waterRadius;
 
+        public static int Size => sizeof(float) * 5;
+    }
 }

@@ -4,11 +4,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+
 namespace TriangleNet.Geometry
 {
-    using System;
-    using System.Collections.Generic;
-
     /// <summary>
     /// Polygon interface.
     /// </summary>
@@ -44,10 +44,10 @@ namespace TriangleNet.Geometry
         /// </summary>
         bool HasSegmentMarkers { get; set; }
 
-        [Obsolete("Use polygon.Add(contour) method instead.")]
+        [Obsolete(message: "Use polygon.Add(contour) method instead.")]
         void AddContour(IEnumerable<Vertex> points, int marker, bool hole, bool convex);
 
-        [Obsolete("Use polygon.Add(contour) method instead.")]
+        [Obsolete(message: "Use polygon.Add(contour) method instead.")]
         void AddContour(IEnumerable<Vertex> points, int marker, Point hole);
 
         /// <summary>

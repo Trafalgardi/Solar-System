@@ -4,28 +4,23 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+
 namespace TriangleNet.Geometry
 {
-    using System;
-    using System.Collections.Generic;
-
     public class Contour
     {
-        int marker;
+        private readonly int marker;
 
-        bool convex;
-
-        /// <summary>
-        /// Gets or sets the list of points making up the contour.
-        /// </summary>
-        public List<Vertex> Points { get; set; }
+        private readonly bool convex;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Contour" /> class.
         /// </summary>
         /// <param name="points">The points that make up the contour.</param>
         public Contour(IEnumerable<Vertex> points)
-            : this(points, 0, false)
+            : this(points, marker: 0, convex: false)
         {
         }
 
@@ -35,7 +30,7 @@ namespace TriangleNet.Geometry
         /// <param name="points">The points that make up the contour.</param>
         /// <param name="marker">Contour marker.</param>
         public Contour(IEnumerable<Vertex> points, int marker)
-            : this(points, marker, false)
+            : this(points, marker, convex: false)
         {
         }
 
@@ -53,22 +48,27 @@ namespace TriangleNet.Geometry
             this.convex = convex;
         }
 
+        /// <summary>
+        /// Gets or sets the list of points making up the contour.
+        /// </summary>
+        public List<Vertex> Points { get; set; }
+
         public List<ISegment> GetSegments()
         {
             var segments = new List<ISegment>();
 
-            var p = this.Points;
+            var p = Points;
 
-            int count = p.Count - 1;
+            var count = p.Count - 1;
 
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
                 // Add segments to polygon.
                 segments.Add(new Segment(p[i], p[i + 1], marker));
             }
 
             // Close the contour.
-            segments.Add(new Segment(p[count], p[0], marker));
+            segments.Add(new Segment(p[count], p[index: 0], marker));
 
             return segments;
         }
@@ -92,14 +92,14 @@ namespace TriangleNet.Geometry
         {
             if (convex)
             {
-                int count = this.Points.Count;
+                var count = Points.Count;
 
-                var point = new Point(0.0, 0.0);
+                var point = new Point(x: 0.0, y: 0.0);
 
-                for (int i = 0; i < count; i++)
+                for (var i = 0; i < count; i++)
                 {
-                    point.x += this.Points[i].x;
-                    point.y += this.Points[i].y;
+                    point.x += Points[i].x;
+                    point.y += Points[i].y;
                 }
 
                 // If the contour is convex, use its centroid.
@@ -109,17 +109,17 @@ namespace TriangleNet.Geometry
                 return point;
             }
 
-            return FindPointInPolygon(this.Points, limit, eps);
+            return FindPointInPolygon(Points, limit, eps);
         }
 
         private void AddPoints(IEnumerable<Vertex> points)
         {
-            this.Points = new List<Vertex>(points);
+            Points = new List<Vertex>(points);
 
-            int count = Points.Count - 1;
+            var count = Points.Count - 1;
 
             // Check if first vertex equals last vertex.
-            if (Points[0] == Points[count])
+            if (Points[index: 0] == Points[count])
             {
                 Points.RemoveAt(count);
             }
@@ -132,7 +132,7 @@ namespace TriangleNet.Geometry
             var bounds = new Rectangle();
             bounds.Expand(contour);
 
-            int length = contour.Count;
+            var length = contour.Count;
 
             var test = new Point();
 
@@ -144,10 +144,10 @@ namespace TriangleNet.Geometry
 
             var predicates = new RobustPredicates();
 
-            a = contour[0];
-            b = contour[1];
+            a = contour[index: 0];
+            b = contour[index: 1];
 
-            for (int i = 0; i < length; i++)
+            for (var i = 0; i < length; i++)
             {
                 c = contour[(i + 2) % length];
 
@@ -179,7 +179,7 @@ namespace TriangleNet.Geometry
 
                 h = 1.0;
 
-                for (int j = 0; j < limit; j++)
+                for (var j = 0; j < limit; j++)
                 {
                     // Search in direction.
                     test.x = bx + dx * h;
@@ -220,19 +220,19 @@ namespace TriangleNet.Geometry
         /// </remarks>
         private static bool IsPointInPolygon(Point point, List<Vertex> poly)
         {
-            bool inside = false;
+            var inside = false;
 
-            double x = point.x;
-            double y = point.y;
+            var x = point.x;
+            var y = point.y;
 
-            int count = poly.Count;
+            var count = poly.Count;
 
             for (int i = 0, j = count - 1; i < count; i++)
             {
-                if (((poly[i].y < y && poly[j].y >= y) || (poly[j].y < y && poly[i].y >= y))
-                    && (poly[i].x <= x || poly[j].x <= x))
+                if (((poly[i].y < y && poly[j].y >= y) || (poly[j].y < y && poly[i].y >= y)) &&
+                    (poly[i].x <= x || poly[j].x <= x))
                 {
-                    inside ^= (poly[i].x + (y - poly[i].y) / (poly[j].y - poly[i].y) * (poly[j].x - poly[i].x) < x);
+                    inside ^= poly[i].x + (y - poly[i].y) / (poly[j].y - poly[i].y) * (poly[j].x - poly[i].x) < x;
                 }
 
                 j = i;

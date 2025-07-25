@@ -4,11 +4,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.IO;
+using TriangleNet.Meshing;
+
 namespace TriangleNet.IO
 {
-    using System.IO;
-    using TriangleNet.Meshing;
-
     /// <summary>
     /// Interface for mesh I/O.
     /// </summary>

@@ -4,19 +4,17 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+using TriangleNet.Tools;
+using TriangleNet.Topology.DCEL;
+
 namespace TriangleNet.Voronoi
 {
-    using System.Collections.Generic;
-    using TriangleNet.Geometry;
-    using TriangleNet.Tools;
-    using TriangleNet.Topology.DCEL;
-
-    using HVertex = TriangleNet.Topology.DCEL.Vertex;
-    using TVertex = TriangleNet.Geometry.Vertex;
+    using TVertex = Geometry.Vertex;
 
     public class BoundedVoronoi : VoronoiBase
     {
-        int offset;
+        private int offset;
 
         public BoundedVoronoi(Mesh mesh)
             : this(mesh, new DefaultVoronoiFactory(), RobustPredicates.Default)
@@ -24,14 +22,14 @@ namespace TriangleNet.Voronoi
         }
 
         public BoundedVoronoi(Mesh mesh, IVoronoiFactory factory, IPredicates predicates)
-            : base(mesh, factory, predicates, true)
+            : base(mesh, factory, predicates, generate: true)
         {
             // We explicitly told the base constructor to call the Generate method, so
             // at this point the basic Voronoi diagram is already created.
-            offset = base.vertices.Count;
+            offset = vertices.Count;
 
             // Each vertex of the hull will be part of a Voronoi cell.
-            base.vertices.Capacity = offset + mesh.hullsize;
+            vertices.Capacity = offset + mesh.hullsize;
 
             // Create bounded Voronoi diagram.
             PostProcess();
@@ -51,7 +49,7 @@ namespace TriangleNet.Voronoi
                 var v1 = (TVertex)edge.face.generator;
                 var v2 = (TVertex)twin.face.generator;
 
-                double dir = predicates.CounterClockwise(v1, v2, edge.origin);
+                var dir = predicates.CounterClockwise(v1, v2, edge.origin);
 
                 if (dir <= 0)
                 {
@@ -94,16 +92,16 @@ namespace TriangleNet.Voronoi
             // Let the face edge point to the edge leaving at generator.
             edge.face.edge = h2;
 
-            base.edges.Add(h1);
-            base.edges.Add(h2);
+            edges.Add(h1);
+            edges.Add(h2);
 
-            int count = base.edges.Count;
+            var count = edges.Count;
 
             h1.id = count;
             h2.id = count + 1;
 
             gen.id = offset++;
-            base.vertices.Add(gen);
+            vertices.Add(gen);
         }
 
         /// <summary>
@@ -143,12 +141,12 @@ namespace TriangleNet.Voronoi
             // Let the face edge point to the edge leaving at generator.
             edge.face.edge = he;
 
-            base.edges.Add(he);
+            edges.Add(he);
 
-            he.id = base.edges.Count;
+            he.id = edges.Count;
 
             gen.id = offset++;
-            base.vertices.Add(gen);
+            vertices.Add(gen);
         }
 
         /*

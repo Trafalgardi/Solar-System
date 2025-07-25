@@ -4,23 +4,22 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Meshing.Iterators
 {
-    using System.Collections.Generic;
-    using TriangleNet.Topology;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// Enumerates the edges of a triangulation.
     /// </summary>
     public class EdgeIterator : IEnumerator<Edge>
     {
-        IEnumerator<Triangle> triangles;
-        Otri tri = default(Otri);
-        Otri neighbor = default(Otri);
-        Osub sub = default(Osub);
-        Edge current;
-        Vertex p1, p2;
+        private readonly IEnumerator<Triangle> triangles;
+        private Otri tri = default;
+        private Otri neighbor = default;
+        private Osub sub = default;
+        private Vertex p1, p2;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EdgeIterator" /> class.
@@ -34,20 +33,9 @@ namespace TriangleNet.Meshing.Iterators
             tri.orient = 0;
         }
 
-        public Edge Current
-        {
-            get { return current; }
-        }
+        public Edge Current { get; private set; }
 
-        public void Dispose()
-        {
-            this.triangles.Dispose();
-        }
-
-        object System.Collections.IEnumerator.Current
-        {
-            get { return current; }
-        }
+        public void Dispose() => triangles.Dispose();
 
         public bool MoveNext()
         {
@@ -56,9 +44,9 @@ namespace TriangleNet.Meshing.Iterators
                 return false;
             }
 
-            current = null;
+            Current = null;
 
-            while (current == null)
+            while (Current == null)
             {
                 if (tri.orient == 3)
                 {
@@ -76,7 +64,7 @@ namespace TriangleNet.Meshing.Iterators
 
                 tri.Sym(ref neighbor);
 
-                if ((tri.tri.id < neighbor.tri.id) || (neighbor.tri.id == Mesh.DUMMY))
+                if (tri.tri.id < neighbor.tri.id || neighbor.tri.id == Mesh.DUMMY)
                 {
                     p1 = tri.Org();
                     p2 = tri.Dest();
@@ -84,7 +72,7 @@ namespace TriangleNet.Meshing.Iterators
                     tri.Pivot(ref sub);
 
                     // Boundary mark of dummysub is 0, so we don't need to worry about that.
-                    current = new Edge(p1.id, p2.id, sub.seg.boundary);
+                    Current = new Edge(p1.id, p2.id, sub.seg.boundary);
                 }
 
                 tri.orient++;
@@ -93,9 +81,8 @@ namespace TriangleNet.Meshing.Iterators
             return true;
         }
 
-        public void Reset()
-        {
-            this.triangles.Reset();
-        }
+        public void Reset() => triangles.Reset();
+
+        object System.Collections.IEnumerator.Current => Current;
     }
 }

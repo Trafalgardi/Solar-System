@@ -4,19 +4,19 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Diagnostics;
+
 namespace TriangleNet.Geometry
 {
-    using System;
-    using System.Diagnostics;
-
     /// <summary>
     /// Represents a 2D point.
     /// </summary>
-#if USE_Z
+    #if USE_Z
     [DebuggerDisplay("ID {ID} [{X}, {Y}, {Z}]")]
-#else
-    [DebuggerDisplay("ID {ID} [{X}, {Y}]")]
-#endif
+    #else
+    [DebuggerDisplay(value: "ID {ID} [{X}, {Y}]")]
+    #endif
     public class Point : IComparable<Point>, IEquatable<Point>
     {
         internal int id;
@@ -24,17 +24,17 @@ namespace TriangleNet.Geometry
 
         internal double x;
         internal double y;
-#if USE_Z
+        #if USE_Z
         internal double z;
-#endif
+        #endif
 
         public Point()
-            : this(0.0, 0.0, 0)
+            : this(x: 0.0, y: 0.0, label: 0)
         {
         }
 
         public Point(double x, double y)
-            : this(x, y, 0)
+            : this(x, y, label: 0)
         {
         }
 
@@ -52,8 +52,8 @@ namespace TriangleNet.Geometry
         /// </summary>
         public int ID
         {
-            get { return this.id; }
-            set { this.id = value; }
+            get => id;
+            set => id = value;
         }
 
         /// <summary>
@@ -61,8 +61,8 @@ namespace TriangleNet.Geometry
         /// </summary>
         public double X
         {
-            get { return this.x; }
-            set { this.x = value; }
+            get => x;
+            set => x = value;
         }
 
         /// <summary>
@@ -70,11 +70,11 @@ namespace TriangleNet.Geometry
         /// </summary>
         public double Y
         {
-            get { return this.y; }
-            set { this.y = value; }
+            get => y;
+            set => y = value;
         }
 
-#if USE_Z
+        #if USE_Z
         /// <summary>
         /// Gets or sets the vertex z coordinate.
         /// </summary>
@@ -83,7 +83,7 @@ namespace TriangleNet.Geometry
             get { return this.z; }
             set { this.z = value; }
         }
-#endif
+        #endif
 
         /// <summary>
         /// Gets or sets a general-purpose label.
@@ -93,8 +93,8 @@ namespace TriangleNet.Geometry
         /// </remarks>
         public int Label
         {
-            get { return this.label; }
-            set { this.label = value; }
+            get => label;
+            set => label = value;
         }
 
         #endregion
@@ -107,13 +107,13 @@ namespace TriangleNet.Geometry
         public static bool operator ==(Point a, Point b)
         {
             // If both are null, or both are same instance, return true.
-            if (Object.ReferenceEquals(a, b))
+            if (ReferenceEquals(a, b))
             {
                 return true;
             }
 
             // If one is null, but not both, return false.
-            if (((object)a == null) || ((object)b == null))
+            if ((object)a == null || (object)b == null)
             {
                 return false;
             }
@@ -121,10 +121,7 @@ namespace TriangleNet.Geometry
             return a.Equals(b);
         }
 
-        public static bool operator !=(Point a, Point b)
-        {
-            return !(a == b);
-        }
+        public static bool operator !=(Point a, Point b) => !(a == b);
 
         public override bool Equals(object obj)
         {
@@ -134,14 +131,14 @@ namespace TriangleNet.Geometry
                 return false;
             }
 
-            Point p = obj as Point;
+            var p = obj as Point;
 
             if ((object)p == null)
             {
                 return false;
             }
 
-            return (x == p.x) && (y == p.y);
+            return x == p.x && y == p.y;
         }
 
         public bool Equals(Point p)
@@ -153,7 +150,7 @@ namespace TriangleNet.Geometry
             }
 
             // Return true if the fields match:
-            return (x == p.x) && (y == p.y);
+            return x == p.x && y == p.y;
         }
 
         #endregion
@@ -165,12 +162,12 @@ namespace TriangleNet.Geometry
                 return 0;
             }
 
-            return (x < other.x || (x == other.x && y < other.y)) ? -1 : 1;
+            return x < other.x || (x == other.x && y < other.y) ? -1 : 1;
         }
 
         public override int GetHashCode()
         {
-            int hash = 19;
+            var hash = 19;
             hash = hash * 31 + x.GetHashCode();
             hash = hash * 31 + y.GetHashCode();
 

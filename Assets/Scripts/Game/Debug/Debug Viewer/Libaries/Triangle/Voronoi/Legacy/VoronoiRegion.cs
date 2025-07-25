@@ -4,78 +4,54 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Voronoi.Legacy
 {
-    using System;
-    using System.Collections.Generic;
-    using TriangleNet.Topology;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// Represents a region in the Voronoi diagram.
     /// </summary>
     public class VoronoiRegion
     {
-        int id;
-        Point generator;
-        List<Point> vertices;
-        bool bounded;
+        private readonly List<Point> vertices;
 
         // A map (vertex id) -> (neighbor across adjacent edge)
-        Dictionary<int, VoronoiRegion> neighbors;
+        private readonly Dictionary<int, VoronoiRegion> neighbors;
+
+        public VoronoiRegion(Vertex generator)
+        {
+            ID = generator.id;
+            this.Generator = generator;
+            vertices = new List<Point>();
+            Bounded = true;
+
+            neighbors = new Dictionary<int, VoronoiRegion>();
+        }
 
         /// <summary>
         /// Gets the Voronoi region id (which is the same as the generators vertex id).
         /// </summary>
-        public int ID
-        {
-            get { return id; }
-        }
+        public int ID { get; }
 
         /// <summary>
         /// Gets the Voronoi regions generator.
         /// </summary>
-        public Point Generator
-        {
-            get { return generator; }
-        }
+        public Point Generator { get; }
 
         /// <summary>
         /// Gets the Voronoi vertices on the regions boundary.
         /// </summary>
-        public ICollection<Point> Vertices
-        {
-            get { return vertices; }
-        }
+        public ICollection<Point> Vertices => vertices;
 
         /// <summary>
         /// Gets or sets whether the Voronoi region is bounded.
         /// </summary>
-        public bool Bounded
-        {
-            get { return bounded; }
-            set { bounded = value; }
-        }
+        public bool Bounded { get; set; }
 
-        public VoronoiRegion(Vertex generator)
-        {
-            this.id = generator.id;
-            this.generator = generator;
-            this.vertices = new List<Point>();
-            this.bounded = true;
+        public void Add(Point point) => vertices.Add(point);
 
-            this.neighbors = new Dictionary<int, VoronoiRegion>();
-        }
-
-        public void Add(Point point)
-        {
-            this.vertices.Add(point);
-        }
-
-        public void Add(List<Point> points)
-        {
-            this.vertices.AddRange(points);
-        }
+        public void Add(List<Point> points) => vertices.AddRange(points);
 
         /// <summary>
         /// Returns the neighbouring Voronoi region, that lies across the edge starting at
@@ -98,14 +74,8 @@ namespace TriangleNet.Voronoi.Legacy
             return null;
         }
 
-        internal void AddNeighbor(int id, VoronoiRegion neighbor)
-        {
-            this.neighbors.Add(id, neighbor);
-        }
+        public override string ToString() => string.Format(format: "R-ID {0}", ID);
 
-        public override string ToString()
-        {
-            return String.Format("R-ID {0}", id);
-        }
+        internal void AddNeighbor(int id, VoronoiRegion neighbor) => neighbors.Add(id, neighbor);
     }
 }

@@ -5,12 +5,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Meshing.Data
 {
-    using System;
-    using TriangleNet.Geometry;
-    using TriangleNet.Topology;
-
     /// <summary>
     /// A queue used to store encroached subsegments.
     /// </summary>
@@ -18,19 +17,13 @@ namespace TriangleNet.Meshing.Data
     /// Each subsegment's vertices are stored so that we can check whether a 
     /// subsegment is still the same.
     /// </remarks>
-    class BadSubseg
+    internal class BadSubseg
     {
-        public Osub subseg; // An encroached subsegment.
+        public Osub subseg;      // An encroached subsegment.
         public Vertex org, dest; // Its two vertices.
 
-        public override int GetHashCode()
-        {
-            return subseg.seg.hash;
-        }
+        public override int GetHashCode() => subseg.seg.hash;
 
-        public override string ToString()
-        {
-            return String.Format("B-SID {0}", subseg.seg.hash);
-        }
+        public override string ToString() => string.Format(format: "B-SID {0}", subseg.seg.hash);
     }
 }

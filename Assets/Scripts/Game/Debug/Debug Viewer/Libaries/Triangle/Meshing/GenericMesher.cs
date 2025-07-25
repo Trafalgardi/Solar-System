@@ -4,21 +4,21 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.IO;
+using TriangleNet.Meshing.Algorithm;
+
 namespace TriangleNet.Meshing
 {
-    using System;
-    using System.Collections.Generic;
-    using TriangleNet.Geometry;
-    using TriangleNet.IO;
-    using TriangleNet.Meshing.Algorithm;
-
     /// <summary>
     /// Create meshes of point sets or polygons.
     /// </summary>
     public class GenericMesher
     {
-        Configuration config;
-        ITriangulator triangulator;
+        private readonly Configuration config;
+        private readonly ITriangulator triangulator;
 
         public GenericMesher()
             : this(new Dwyer(), new Configuration())
@@ -42,28 +42,18 @@ namespace TriangleNet.Meshing
         }
 
         /// <inheritdoc />
-        public IMesh Triangulate(IList<Vertex> points)
-        {
-            return triangulator.Triangulate(points, config);
-        }
+        public IMesh Triangulate(IList<Vertex> points) => triangulator.Triangulate(points, config);
 
         /// <inheritdoc />
-        public IMesh Triangulate(IPolygon polygon)
-        {
-            return Triangulate(polygon, null, null);
-        }
+        public IMesh Triangulate(IPolygon polygon) => Triangulate(polygon, options: null, quality: null);
 
         /// <inheritdoc />
         public IMesh Triangulate(IPolygon polygon, ConstraintOptions options)
-        {
-            return Triangulate(polygon, options, null);
-        }
+            => Triangulate(polygon, options, quality: null);
 
         /// <inheritdoc />
         public IMesh Triangulate(IPolygon polygon, QualityOptions quality)
-        {
-            return Triangulate(polygon, null, quality);
-        }
+            => Triangulate(polygon, options: null, quality);
 
         /// <inheritdoc />
         public IMesh Triangulate(IPolygon polygon, ConstraintOptions options, QualityOptions quality)
@@ -96,15 +86,15 @@ namespace TriangleNet.Meshing
         {
             if (width <= 0.0)
             {
-                throw new ArgumentException("width");
+                throw new ArgumentException(message: "width");
             }
 
             if (height <= 0.0)
             {
-                throw new ArgumentException("height");
+                throw new ArgumentException(message: "height");
             }
 
-            return StructuredMesh(new Rectangle(0.0, 0.0, width, height), nx, ny);
+            return StructuredMesh(new Rectangle(x: 0.0, y: 0.0, width, height), nx, ny);
         }
 
         /// <summary>
@@ -166,15 +156,15 @@ namespace TriangleNet.Meshing
                 a = points[j];
                 b = points[j + 1];
 
-                segments.Add(new Segment(a, b, 1));
+                segments.Add(new Segment(a, b, label: 1));
 
                 a.Label = b.Label = 1;
 
                 // Right
                 a = points[nx * (ny + 1) + j];
-                b = points[nx * (ny + 1) + (j + 1)];
+                b = points[nx * (ny + 1) + j + 1];
 
-                segments.Add(new Segment(a, b, 1));
+                segments.Add(new Segment(a, b, label: 1));
 
                 a.Label = b.Label = 1;
             }
@@ -185,7 +175,7 @@ namespace TriangleNet.Meshing
                 a = points[(ny + 1) * i];
                 b = points[(ny + 1) * (i + 1)];
 
-                segments.Add(new Segment(a, b, 1));
+                segments.Add(new Segment(a, b, label: 1));
 
                 a.Label = b.Label = 1;
 
@@ -193,7 +183,7 @@ namespace TriangleNet.Meshing
                 a = points[ny + (ny + 1) * i];
                 b = points[ny + (ny + 1) * (i + 1)];
 
-                segments.Add(new Segment(a, b, 1));
+                segments.Add(new Segment(a, b, label: 1));
 
                 a.Label = b.Label = 1;
             }

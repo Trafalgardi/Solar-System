@@ -4,49 +4,23 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+
 namespace TriangleNet.Geometry
 {
-    using System;
-
     /// <summary>
     /// Represents a straight line segment in 2D space.
     /// </summary>
     public class Segment : ISegment
     {
-        Vertex v0;
-        Vertex v1;
-
-        int label;
-
-        /// <summary>
-        /// Gets or sets the segments boundary mark.
-        /// </summary>
-        public int Label
-        {
-            get { return label; }
-            set { label = value; }
-        }
-        /// <summary>
-        /// Gets the first endpoints index.
-        /// </summary>
-        public int P0
-        {
-            get { return v0.id; }
-        }
-
-        /// <summary>
-        /// Gets the second endpoints index.
-        /// </summary>
-        public int P1
-        {
-            get { return v1.id; }
-        }
+        private readonly Vertex v0;
+        private readonly Vertex v1;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Segment" /> class.
         /// </summary>
         public Segment(Vertex v0, Vertex v1)
-            : this (v0, v1, 0)
+            : this(v0, v1, label: 0)
         {
         }
 
@@ -58,8 +32,23 @@ namespace TriangleNet.Geometry
             this.v0 = v0;
             this.v1 = v1;
 
-            this.label = label;
+            this.Label = label;
         }
+
+        /// <summary>
+        /// Gets or sets the segments boundary mark.
+        /// </summary>
+        public int Label { get; set; }
+
+        /// <summary>
+        /// Gets the first endpoints index.
+        /// </summary>
+        public int P0 => v0.id;
+
+        /// <summary>
+        /// Gets the second endpoints index.
+        /// </summary>
+        public int P1 => v1.id;
 
         /// <summary>
         /// Gets the specified segment endpoint.
@@ -84,9 +73,6 @@ namespace TriangleNet.Geometry
         /// <summary>
         /// WARNING: not implemented.
         /// </summary>
-        public ITriangle GetTriangle(int index)
-        {
-            throw new NotImplementedException();
-        }
+        public ITriangle GetTriangle(int index) => throw new NotImplementedException();
     }
 }

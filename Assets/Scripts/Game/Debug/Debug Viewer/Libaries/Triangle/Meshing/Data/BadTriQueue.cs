@@ -5,11 +5,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Meshing.Data
 {
-    using TriangleNet.Geometry;
-    using TriangleNet.Topology;
-
     /// <summary>
     /// A (priority) queue for bad triangles.
     /// </summary>
@@ -18,20 +18,16 @@ namespace TriangleNet.Meshing.Data
     //  give priority to smaller angles. I originally implemented a heap, but
     //  the queues are faster by a larger margin than I'd suspected.
     /// </remarks>
-    class BadTriQueue
+    internal class BadTriQueue
     {
-        const double SQRT2 = 1.4142135623730950488016887242096980785696718753769480732;
-
-        public int Count { get { return this.count; } }
+        private const double SQRT2 = 1.4142135623730950488016887242096980785696718753769480732;
 
         // Variables that maintain the bad triangle queues.  The queues are
         // ordered from 4095 (highest priority) to 0 (lowest priority).
-        BadTriangle[] queuefront;
-        BadTriangle[] queuetail;
-        int[] nextnonemptyq;
-        int firstnonemptyq;
-
-        int count;
+        private readonly BadTriangle[] queuefront;
+        private readonly BadTriangle[] queuetail;
+        private readonly int[] nextnonemptyq;
+        private int firstnonemptyq;
 
         public BadTriQueue()
         {
@@ -41,8 +37,10 @@ namespace TriangleNet.Meshing.Data
 
             firstnonemptyq = -1;
 
-            count = 0;
+            Count = 0;
         }
+
+        public int Count { get; private set; }
 
         /// <summary>
         /// Add a bad triangle data structure to the end of a queue.
@@ -56,7 +54,7 @@ namespace TriangleNet.Meshing.Data
             int posexponent;
             int i;
 
-            this.count++;
+            Count++;
 
             // Determine the appropriate queue to put the bad triangle into.
             // Recall that the key is the square of its shortest edge length.
@@ -72,25 +70,31 @@ namespace TriangleNet.Meshing.Data
                 length = 1.0 / badtri.key;
                 posexponent = 0;
             }
+
             // 'length' is approximately 2.0 to what exponent?  The following code
             // determines the answer in time logarithmic in the exponent.
             exponent = 0;
+
             while (length > 2.0)
             {
                 // Find an approximation by repeated squaring of two.
                 expincrement = 1;
                 multiplier = 0.5;
+
                 while (length * multiplier * multiplier > 1.0)
                 {
                     expincrement *= 2;
                     multiplier *= multiplier;
                 }
+
                 // Reduce the value of 'length', then iterate if necessary.
                 exponent += expincrement;
                 length *= multiplier;
             }
+
             // 'length' is approximately squareroot(2.0) to what exponent?
             exponent = 2 * exponent + (length > SQRT2 ? 1 : 0);
+
             // 'exponent' is now in the range 0...2047 for IEEE double precision.
             // Choose a queue in the range 0...4095.  The shortest edges have the
             // highest priority (queue 4095).
@@ -119,14 +123,17 @@ namespace TriangleNet.Meshing.Data
                     // No, this is not the highest-priority queue.
                     // Find the queue with next higher priority.
                     i = queuenumber + 1;
+
                     while (queuefront[i] == null)
                     {
                         i++;
                     }
+
                     // Mark the newly nonempty queue as following a higher-priority queue.
                     nextnonemptyq[queuenumber] = nextnonemptyq[i];
                     nextnonemptyq[i] = queuenumber;
                 }
+
                 // Put the bad triangle at the beginning of the (empty) queue.
                 queuefront[queuenumber] = badtri;
             }
@@ -135,6 +142,7 @@ namespace TriangleNet.Meshing.Data
                 // Add the bad triangle to the end of an already nonempty queue.
                 queuetail[queuenumber].next = badtri;
             }
+
             // Maintain a pointer to the last triangle of the queue.
             queuetail[queuenumber] = badtri;
             // Newly enqueued bad triangle has no successor in the queue.
@@ -152,7 +160,7 @@ namespace TriangleNet.Meshing.Data
         public void Enqueue(ref Otri enqtri, double minedge, Vertex apex, Vertex org, Vertex dest)
         {
             // Allocate space for the bad triangle.
-            BadTriangle newbad = new BadTriangle();
+            var newbad = new BadTriangle();
 
             newbad.poortri = enqtri;
             newbad.key = minedge;
@@ -175,12 +183,13 @@ namespace TriangleNet.Meshing.Data
                 return null;
             }
 
-            this.count--;
+            Count--;
 
             // Find the first triangle of the highest-priority queue.
-            BadTriangle result = queuefront[firstnonemptyq];
+            var result = queuefront[firstnonemptyq];
             // Remove the triangle from the queue.
             queuefront[firstnonemptyq] = result.next;
+
             // If this queue is now empty, note the new highest-priority
             // nonempty queue.
             if (result == queuetail[firstnonemptyq])

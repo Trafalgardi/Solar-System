@@ -4,11 +4,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Meshing
 {
-    using System.Collections.Generic;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// Interface for point set triangulation.
     /// </summary>

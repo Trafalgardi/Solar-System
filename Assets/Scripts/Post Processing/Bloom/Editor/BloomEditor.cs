@@ -21,8 +21,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-using UnityEngine;
+
 using UnityEditor;
+using UnityEngine;
 
 namespace Kino
 {
@@ -30,33 +31,23 @@ namespace Kino
     [CustomEditor(typeof(BloomEffect))]
     public class BloomEditor : Editor
     {
-        BloomGraphDrawer _graph;
+        private BloomGraphDrawer _graph;
 
-        SerializedProperty _threshold;
-        SerializedProperty _softKnee;
-        SerializedProperty _radius;
-        SerializedProperty _intensity;
-        SerializedProperty _highQuality;
-        SerializedProperty _antiFlicker;
+        private SerializedProperty _threshold;
+        private SerializedProperty _softKnee;
+        private SerializedProperty _radius;
+        private SerializedProperty _intensity;
+        private SerializedProperty _highQuality;
+        private SerializedProperty _antiFlicker;
 
-        static GUIContent _textThreshold = new GUIContent("Threshold (gamma)");
-
-        void OnEnable()
-        {
-            _graph = new BloomGraphDrawer();
-            _threshold = serializedObject.FindProperty("_threshold");
-            _softKnee = serializedObject.FindProperty("_softKnee");
-            _radius = serializedObject.FindProperty("_radius");
-            _intensity = serializedObject.FindProperty("_intensity");
-            _highQuality = serializedObject.FindProperty("_highQuality");
-            _antiFlicker = serializedObject.FindProperty("_antiFlicker");
-        }
+        private static readonly GUIContent _textThreshold = new(text: "Threshold (gamma)");
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
-            if (!serializedObject.isEditingMultipleObjects) {
+            if (!serializedObject.isEditingMultipleObjects)
+            {
                 EditorGUILayout.Space();
                 _graph.Prepare((BloomEffect)target);
                 _graph.DrawGraph();
@@ -71,6 +62,17 @@ namespace Kino
             EditorGUILayout.PropertyField(_antiFlicker);
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        private void OnEnable()
+        {
+            _graph = new BloomGraphDrawer();
+            _threshold = serializedObject.FindProperty(propertyPath: "_threshold");
+            _softKnee = serializedObject.FindProperty(propertyPath: "_softKnee");
+            _radius = serializedObject.FindProperty(propertyPath: "_radius");
+            _intensity = serializedObject.FindProperty(propertyPath: "_intensity");
+            _highQuality = serializedObject.FindProperty(propertyPath: "_highQuality");
+            _antiFlicker = serializedObject.FindProperty(propertyPath: "_antiFlicker");
         }
     }
 }

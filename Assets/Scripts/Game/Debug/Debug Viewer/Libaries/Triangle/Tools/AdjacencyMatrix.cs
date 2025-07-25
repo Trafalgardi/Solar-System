@@ -5,25 +5,57 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+
 namespace TriangleNet.Tools
 {
-    using System;
-
     /// <summary>
     /// The adjacency matrix of the mesh.
     /// </summary>
     public class AdjacencyMatrix
     {
         // Number of adjacency entries.
-        int nnz;
+        private readonly int nnz;
 
         // Pointers into the actual adjacency structure adj. Information about row k is
         // stored in entries pcol(k) through pcol(k+1)-1 of adj. Size: N + 1
-        int[] pcol;
 
         // The adjacency structure. For each row, it contains the column indices 
         // of the nonzero entries. Size: nnz
-        int[] irow;
+
+        public AdjacencyMatrix(Mesh mesh)
+        {
+            N = mesh.vertices.Count;
+
+            // Set up the adj_row adjacency pointer array.
+            ColumnPointers = AdjacencyCount(mesh);
+            nnz = ColumnPointers[N];
+
+            // Set up the adj adjacency array.
+            RowIndices = AdjacencySet(mesh, ColumnPointers);
+
+            SortIndices();
+        }
+
+        public AdjacencyMatrix(int[] pcol, int[] irow)
+        {
+            N = pcol.Length - 1;
+
+            nnz = pcol[N];
+
+            this.ColumnPointers = pcol;
+            this.RowIndices = irow;
+
+            if (pcol[0] != 0)
+            {
+                throw new ArgumentException(message: "Expected 0-based indexing.", paramName: "pcol");
+            }
+
+            if (irow.Length < nnz)
+            {
+                throw new ArgumentException();
+            }
+        }
 
         /// <summary>
         /// Gets the number of columns (nodes of the mesh).
@@ -33,52 +65,12 @@ namespace TriangleNet.Tools
         /// <summary>
         /// Gets the column pointers.
         /// </summary>
-        public int[] ColumnPointers
-        {
-            get { return pcol; }
-        }
+        public int[] ColumnPointers { get; }
 
         /// <summary>
         /// Gets the row indices.
         /// </summary>
-        public int[] RowIndices
-        {
-            get { return irow; }
-        }
-
-        public AdjacencyMatrix(Mesh mesh)
-        {
-            this.N = mesh.vertices.Count;
-
-            // Set up the adj_row adjacency pointer array.
-            this.pcol = AdjacencyCount(mesh);
-            this.nnz = pcol[N];
-
-            // Set up the adj adjacency array.
-            this.irow = AdjacencySet(mesh, this.pcol);
-
-            SortIndices();
-        }
-
-        public AdjacencyMatrix(int[] pcol, int[] irow)
-        {
-            this.N = pcol.Length - 1;
-
-            this.nnz = pcol[N];
-
-            this.pcol = pcol;
-            this.irow = irow;
-
-            if (pcol[0] != 0)
-            {
-                throw new ArgumentException("Expected 0-based indexing.", "pcol");
-            }
-
-            if (irow.Length < nnz)
-            {
-                throw new ArgumentException();
-            }
-        }
+        public int[] RowIndices { get; }
 
         /// <summary>
         /// Computes the bandwidth of an adjacency matrix.
@@ -96,9 +88,9 @@ namespace TriangleNet.Tools
 
             for (i = 0; i < N; i++)
             {
-                for (j = pcol[i]; j < pcol[i + 1]; j++)
+                for (j = ColumnPointers[i]; j < ColumnPointers[i + 1]; j++)
                 {
-                    col = irow[j];
+                    col = RowIndices[j];
                     band_lo = Math.Max(band_lo, i - col);
                     band_hi = Math.Max(band_hi, col - i);
                 }
@@ -122,16 +114,16 @@ namespace TriangleNet.Tools
         /// Two nodes are "adjacent" if they are both nodes in some triangle.
         /// Also, a node is considered to be adjacent to itself.
         /// </remarks>
-        int[] AdjacencyCount(Mesh mesh)
+        private int[] AdjacencyCount(Mesh mesh)
         {
-            int n = N;
+            var n = N;
             int n1, n2, n3;
             int tid, nid;
 
-            int[] pcol = new int[n + 1];
+            var pcol = new int[n + 1];
 
             // Set every node to be adjacent to itself.
-            for (int i = 0; i < n; i++)
+            for (var i = 0; i < n; i++)
             {
                 pcol[i] = 1;
             }
@@ -177,13 +169,14 @@ namespace TriangleNet.Tools
 
             // We used PCOL to count the number of entries in each column.
             // Convert it to pointers into the ADJ array.
-            for (int i = n; i > 0; i--)
+            for (var i = n; i > 0; i--)
             {
                 pcol[i] = pcol[i - 1];
             }
 
             pcol[0] = 0;
-            for (int i = 1; i <= n; i++)
+
+            for (var i = 1; i <= n; i++)
             {
                 pcol[i] = pcol[i - 1] + pcol[i];
             }
@@ -199,11 +192,11 @@ namespace TriangleNet.Tools
         /// for a linear triangle finite element discretization of Poisson's
         /// equation in two dimensions.
         /// </remarks>
-        int[] AdjacencySet(Mesh mesh, int[] pcol)
+        private int[] AdjacencySet(Mesh mesh, int[] pcol)
         {
-            int n = this.N;
+            var n = N;
 
-            int[] col = new int[n];
+            var col = new int[n];
 
             // Copy of the adjacency rows input.
             Array.Copy(pcol, col, n);
@@ -211,7 +204,7 @@ namespace TriangleNet.Tools
             int i, nnz = pcol[n];
 
             // Output list, stores the actual adjacency information.
-            int[] list = new int[nnz];
+            var list = new int[nnz];
 
             // Set every node to be adjacent to itself.
             for (i = 0; i < n; i++)
@@ -221,7 +214,7 @@ namespace TriangleNet.Tools
             }
 
             int n1, n2, n3; // Vertex numbers.
-            int tid, nid; // Triangle and neighbor id.
+            int tid, nid;   // Triangle and neighbor id.
 
             // Examine each triangle.
             foreach (var tri in mesh.triangles)
@@ -269,13 +262,13 @@ namespace TriangleNet.Tools
         {
             int k1, k2, n = N;
 
-            int[] list = this.irow;
+            var list = RowIndices;
 
             // Ascending sort the entries for each column.
-            for (int i = 0; i < n; i++)
+            for (var i = 0; i < n; i++)
             {
-                k1 = pcol[i];
-                k2 = pcol[i + 1];
+                k1 = ColumnPointers[i];
+                k2 = ColumnPointers[i + 1];
                 Array.Sort(list, k1, k2 - k1);
             }
         }

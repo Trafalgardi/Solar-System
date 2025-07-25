@@ -1,51 +1,52 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public abstract class CelestialBodyShape : ScriptableObject {
+public abstract class CelestialBodyShape : ScriptableObject
+{
+    private ComputeBuffer heightBuffer;
 
-	public bool randomize;
-	public int seed;
-	public ComputeShader heightMapCompute;
+    public bool randomize;
+    public int seed;
+    public ComputeShader heightMapCompute;
 
-	public bool perturbVertices;
-	public ComputeShader perturbCompute;
-	[Range (0, 1)]
-	public float perturbStrength = 0.7f;
+    public bool perturbVertices;
+    public ComputeShader perturbCompute;
 
-	public event System.Action OnSettingChanged;
+    [Range(min: 0, max: 1)] public float perturbStrength = 0.7f;
 
-	ComputeBuffer heightBuffer;
+    public event System.Action OnSettingChanged;
 
-	public virtual float[] CalculateHeights (ComputeBuffer vertexBuffer) {
-		//Debug.Log (System.Environment.StackTrace);
-		// Set data
-		SetShapeData ();
-		heightMapCompute.SetInt ("numVertices", vertexBuffer.count);
-		heightMapCompute.SetBuffer (0, "vertices", vertexBuffer);
-		ComputeHelper.CreateAndSetBuffer<float> (ref heightBuffer, vertexBuffer.count, heightMapCompute, "heights");
+    public virtual float[] CalculateHeights(ComputeBuffer vertexBuffer)
+    {
+        //Debug.Log (System.Environment.StackTrace);
+        // Set data
+        SetShapeData();
+        heightMapCompute.SetInt(name: "numVertices", vertexBuffer.count);
+        heightMapCompute.SetBuffer(kernelIndex: 0, name: "vertices", vertexBuffer);
 
-		// Run
-		ComputeHelper.Run (heightMapCompute, vertexBuffer.count);
+        ComputeHelper.CreateAndSetBuffer<float>(ref heightBuffer, vertexBuffer.count, heightMapCompute,
+            nameID: "heights");
 
-		// Get heights
-		var heights = new float[vertexBuffer.count];
-		heightBuffer.GetData (heights);
-		return heights;
-	}
+        // Run
+        ComputeHelper.Run(heightMapCompute, vertexBuffer.count);
 
-	public virtual void ReleaseBuffers () {
-		ComputeHelper.Release (heightBuffer);
-	}
+        // Get heights
+        var heights = new float[vertexBuffer.count];
+        heightBuffer.GetData(heights);
 
-	protected virtual void SetShapeData () {
+        return heights;
+    }
 
-	}
+    public virtual void ReleaseBuffers() => ComputeHelper.Release(heightBuffer);
 
-	protected virtual void OnValidate () {
-		if (OnSettingChanged != null) {
-			OnSettingChanged ();
-		}
-	}
+    protected virtual void SetShapeData()
+    {
+    }
 
+    protected virtual void OnValidate()
+    {
+        if (OnSettingChanged != null)
+        {
+            OnSettingChanged();
+        }
+    }
 }

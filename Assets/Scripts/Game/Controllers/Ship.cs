@@ -1,212 +1,221 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class Ship : GravityObject {
+public class Ship : GravityObject
+{
+    private Quaternion targetRot;
+    private Quaternion smoothedRot;
 
-	public InputSettings inputSettings;
-	public Transform hatch;
-	public float hatchAngle;
-	public Transform camViewPoint;
-	public Transform pilotSeatPoint;
-	public LayerMask groundedMask;
-	public GameObject window;
+    private Vector3 thrusterInput;
+    private PlayerController pilot;
+    private int numCollisionTouches;
 
-	[Header ("Handling")]
-	public float thrustStrength = 20;
-	public float rotSpeed = 5;
-	public float rollSpeed = 30;
-	public float rotSmoothSpeed = 10;
+    private readonly KeyCode ascendKey = KeyCode.Space;
+    private readonly KeyCode descendKey = KeyCode.LeftShift;
+    private readonly KeyCode rollCounterKey = KeyCode.Q;
+    private readonly KeyCode rollClockwiseKey = KeyCode.E;
+    private readonly KeyCode forwardKey = KeyCode.W;
+    private readonly KeyCode backwardKey = KeyCode.S;
+    private readonly KeyCode leftKey = KeyCode.A;
+    private readonly KeyCode rightKey = KeyCode.D;
 
-	[Header ("Interact")]
-	public Interactable flightControls;
+    private void Awake()
+    {
+        InitRigidbody();
+        targetRot = transform.rotation;
+        smoothedRot = transform.rotation;
+        inputSettings.Begin();
+    }
 
-	Rigidbody rb;
-	Quaternion targetRot;
-	Quaternion smoothedRot;
+    public InputSettings inputSettings;
+    public Transform hatch;
+    public float hatchAngle;
+    public Transform camViewPoint;
+    public Transform pilotSeatPoint;
+    public LayerMask groundedMask;
+    public GameObject window;
 
-	Vector3 thrusterInput;
-	PlayerController pilot;
-	bool shipIsPiloted;
-	int numCollisionTouches;
-	bool hatchOpen;
+    [Header(header: "Handling")] public float thrustStrength = 20;
 
-	KeyCode ascendKey = KeyCode.Space;
-	KeyCode descendKey = KeyCode.LeftShift;
-	KeyCode rollCounterKey = KeyCode.Q;
-	KeyCode rollClockwiseKey = KeyCode.E;
-	KeyCode forwardKey = KeyCode.W;
-	KeyCode backwardKey = KeyCode.S;
-	KeyCode leftKey = KeyCode.A;
-	KeyCode rightKey = KeyCode.D;
+    public float rotSpeed = 5;
+    public float rollSpeed = 30;
+    public float rotSmoothSpeed = 10;
 
-	void Awake () {
-		InitRigidbody ();
-		targetRot = transform.rotation;
-		smoothedRot = transform.rotation;
-		inputSettings.Begin ();
-	}
+    [Header(header: "Interact")] public Interactable flightControls;
 
-	void Update () {
-		if (shipIsPiloted) {
-			HandleMovement ();
-		}
+    public bool ShowHUD { get; private set; }
 
-		// Animate hatch
-		float hatchTargetAngle = (hatchOpen) ? hatchAngle : 0;
-		hatch.localEulerAngles = Vector3.right * Mathf.LerpAngle (hatch.localEulerAngles.x, hatchTargetAngle, Time.deltaTime);
+    public bool HatchOpen { get; private set; }
 
-		HandleCheats ();
-	}
+    public bool IsPiloted => ShowHUD;
 
-	void HandleMovement () {
-		// Thruster input
-		int thrustInputX = GetInputAxis (leftKey, rightKey);
-		int thrustInputY = GetInputAxis (descendKey, ascendKey);
-		int thrustInputZ = GetInputAxis (backwardKey, forwardKey);
-		thrusterInput = new Vector3 (thrustInputX, thrustInputY, thrustInputZ);
+    public Rigidbody Rigidbody { get; private set; }
 
-		// Rotation input
-		float yawInput = Input.GetAxisRaw ("Mouse X") * rotSpeed * inputSettings.mouseSensitivity / 100f;
-		float pitchInput = Input.GetAxisRaw ("Mouse Y") * rotSpeed * inputSettings.mouseSensitivity / 100f;
-		float rollInput = GetInputAxis (rollCounterKey, rollClockwiseKey) * rollSpeed * Time.deltaTime;
+    public void ToggleHatch() => HatchOpen = !HatchOpen;
 
-		// Calculate rotation
-		if (numCollisionTouches == 0) {
-			var yaw = Quaternion.AngleAxis (yawInput, transform.up);
-			var pitch = Quaternion.AngleAxis (-pitchInput, transform.right);
-			var roll = Quaternion.AngleAxis (-rollInput, transform.forward);
+    public void TogglePiloting()
+    {
+        if (ShowHUD)
+        {
+            StopPilotingShip();
+        }
+        else
+        {
+            PilotShip();
+        }
+    }
 
-			targetRot = yaw * pitch * roll * targetRot;
+    public void PilotShip()
+    {
+        pilot = FindObjectOfType<PlayerController>();
+        ShowHUD = true;
+        pilot.Camera.transform.parent = camViewPoint;
+        pilot.Camera.transform.localPosition = Vector3.zero;
+        pilot.Camera.transform.localRotation = Quaternion.identity;
+        pilot.gameObject.SetActive(value: false);
+        HatchOpen = false;
+        window.SetActive(value: false);
+    }
 
-			smoothedRot = Quaternion.Slerp (transform.rotation, targetRot, Time.deltaTime * rotSmoothSpeed);
-		} else {
-			targetRot = transform.rotation;
-			smoothedRot = transform.rotation;
-		}
-	}
+    public void SetVelocity(Vector3 velocity) => Rigidbody.linearVelocity = velocity;
 
-	void FixedUpdate () {
-		// Gravity
-		Vector3 gravity = NBodySimulation.CalculateAcceleration (rb.position);
-		rb.AddForce (gravity, ForceMode.Acceleration);
+    private void Update()
+    {
+        if (ShowHUD)
+        {
+            HandleMovement();
+        }
 
-		// Thrusters
-		Vector3 thrustDir = transform.TransformVector (thrusterInput);
-		rb.AddForce (thrustDir * thrustStrength, ForceMode.Acceleration);
+        // Animate hatch
+        var hatchTargetAngle = HatchOpen ? hatchAngle : 0;
 
-		if (numCollisionTouches == 0) {
-			rb.MoveRotation (smoothedRot);
-		}
-	}
+        hatch.localEulerAngles =
+            Vector3.right * Mathf.LerpAngle(hatch.localEulerAngles.x, hatchTargetAngle, Time.deltaTime);
 
-	void TeleportToBody (CelestialBody body) {
-		rb.linearVelocity = body.velocity;
-		rb.MovePosition (body.transform.position + (transform.position - body.transform.position).normalized * body.radius * 2);
-	}
+        HandleCheats();
+    }
 
-	int GetInputAxis (KeyCode negativeAxis, KeyCode positiveAxis) {
-		int axis = 0;
-		if (Input.GetKey (positiveAxis)) {
-			axis++;
-		}
-		if (Input.GetKey (negativeAxis)) {
-			axis--;
-		}
-		return axis;
-	}
+    private void HandleMovement()
+    {
+        // Thruster input
+        var thrustInputX = GetInputAxis(leftKey, rightKey);
+        var thrustInputY = GetInputAxis(descendKey, ascendKey);
+        var thrustInputZ = GetInputAxis(backwardKey, forwardKey);
+        thrusterInput = new Vector3(thrustInputX, thrustInputY, thrustInputZ);
 
-	void HandleCheats () {
-		if (Universe.cheatsEnabled) {
-			if (Input.GetKeyDown (KeyCode.Return) && IsPiloted && Time.timeScale != 0) {
-				var shipHud = FindObjectOfType<ShipHUD> ();
-				if (shipHud.LockedBody) {
-					TeleportToBody (shipHud.LockedBody);
-				}
-			}
-		}
-	}
+        // Rotation input
+        var yawInput = Input.GetAxisRaw(axisName: "Mouse X") * rotSpeed * inputSettings.mouseSensitivity / 100f;
+        var pitchInput = Input.GetAxisRaw(axisName: "Mouse Y") * rotSpeed * inputSettings.mouseSensitivity / 100f;
+        var rollInput = GetInputAxis(rollCounterKey, rollClockwiseKey) * rollSpeed * Time.deltaTime;
 
-	void InitRigidbody () {
-		rb = GetComponent<Rigidbody> ();
-		rb.interpolation = RigidbodyInterpolation.Interpolate;
-		rb.useGravity = false;
-		rb.isKinematic = false;
-		rb.centerOfMass = Vector3.zero;
-		rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-	}
+        // Calculate rotation
+        if (numCollisionTouches == 0)
+        {
+            var yaw = Quaternion.AngleAxis(yawInput, transform.up);
+            var pitch = Quaternion.AngleAxis(-pitchInput, transform.right);
+            var roll = Quaternion.AngleAxis(-rollInput, transform.forward);
 
-	public void ToggleHatch () {
-		hatchOpen = !hatchOpen;
-	}
+            targetRot = yaw * pitch * roll * targetRot;
 
-	public void TogglePiloting () {
-		if (shipIsPiloted) {
-			StopPilotingShip ();
-		} else {
-			PilotShip ();
-		}
-	}
+            smoothedRot = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotSmoothSpeed);
+        }
+        else
+        {
+            targetRot = transform.rotation;
+            smoothedRot = transform.rotation;
+        }
+    }
 
-	public void PilotShip () {
-		pilot = FindObjectOfType<PlayerController> ();
-		shipIsPiloted = true;
-		pilot.Camera.transform.parent = camViewPoint;
-		pilot.Camera.transform.localPosition = Vector3.zero;
-		pilot.Camera.transform.localRotation = Quaternion.identity;
-		pilot.gameObject.SetActive (false);
-		hatchOpen = false;
-		window.SetActive (false);
+    private void FixedUpdate()
+    {
+        // Gravity
+        var gravity = NBodySimulation.CalculateAcceleration(Rigidbody.position);
+        Rigidbody.AddForce(gravity, ForceMode.Acceleration);
 
-	}
+        // Thrusters
+        var thrustDir = transform.TransformVector(thrusterInput);
+        Rigidbody.AddForce(thrustDir * thrustStrength, ForceMode.Acceleration);
 
-	void StopPilotingShip () {
-		shipIsPiloted = false;
-		pilot.transform.position = pilotSeatPoint.position;
-		pilot.transform.rotation = pilotSeatPoint.rotation;
-		pilot.Rigidbody.linearVelocity = rb.linearVelocity;
-		pilot.gameObject.SetActive (true);
-		window.SetActive (true);
-		pilot.ExitFromSpaceship ();
-	}
+        if (numCollisionTouches == 0)
+        {
+            Rigidbody.MoveRotation(smoothedRot);
+        }
+    }
 
-	void OnCollisionEnter (Collision other) {
-		if (groundedMask == (groundedMask | (1 << other.gameObject.layer))) {
-			numCollisionTouches++;
-		}
-	}
+    private void TeleportToBody(CelestialBody body)
+    {
+        Rigidbody.linearVelocity = body.velocity;
 
-	void OnCollisionExit (Collision other) {
-		if (groundedMask == (groundedMask | (1 << other.gameObject.layer))) {
-			numCollisionTouches--;
-		}
-	}
+        Rigidbody.MovePosition(body.transform.position +
+                               (transform.position - body.transform.position).normalized * body.radius * 2);
+    }
 
-	public void SetVelocity (Vector3 velocity) {
-		rb.linearVelocity = velocity;
-	}
+    private int GetInputAxis(KeyCode negativeAxis, KeyCode positiveAxis)
+    {
+        var axis = 0;
 
-	public bool ShowHUD {
-		get {
-			return shipIsPiloted;
-		}
-	}
-	public bool HatchOpen {
-		get {
-			return hatchOpen;
-		}
-	}
+        if (Input.GetKey(positiveAxis))
+        {
+            axis++;
+        }
 
-	public bool IsPiloted {
-		get {
-			return shipIsPiloted;
-		}
-	}
+        if (Input.GetKey(negativeAxis))
+        {
+            axis--;
+        }
 
-	public Rigidbody Rigidbody {
-		get {
-			return rb;
-		}
-	}
+        return axis;
+    }
 
+    private void HandleCheats()
+    {
+        if (Universe.cheatsEnabled)
+        {
+            if (Input.GetKeyDown(KeyCode.Return) && IsPiloted && Time.timeScale != 0)
+            {
+                var shipHud = FindObjectOfType<ShipHUD>();
+
+                if (shipHud.LockedBody)
+                {
+                    TeleportToBody(shipHud.LockedBody);
+                }
+            }
+        }
+    }
+
+    private void InitRigidbody()
+    {
+        Rigidbody = GetComponent<Rigidbody>();
+        Rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+        Rigidbody.useGravity = false;
+        Rigidbody.isKinematic = false;
+        Rigidbody.centerOfMass = Vector3.zero;
+        Rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+    }
+
+    private void StopPilotingShip()
+    {
+        ShowHUD = false;
+        pilot.transform.position = pilotSeatPoint.position;
+        pilot.transform.rotation = pilotSeatPoint.rotation;
+        pilot.Rigidbody.linearVelocity = Rigidbody.linearVelocity;
+        pilot.gameObject.SetActive(value: true);
+        window.SetActive(value: true);
+        pilot.ExitFromSpaceship();
+    }
+
+    private void OnCollisionEnter(Collision other)
+    {
+        if (groundedMask == (groundedMask | (1 << other.gameObject.layer)))
+        {
+            numCollisionTouches++;
+        }
+    }
+
+    private void OnCollisionExit(Collision other)
+    {
+        if (groundedMask == (groundedMask | (1 << other.gameObject.layer)))
+        {
+            numCollisionTouches--;
+        }
+    }
 }

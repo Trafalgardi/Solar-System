@@ -5,12 +5,12 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Meshing.Iterators
 {
-    using System;
-    using System.Collections.Generic;
-    using TriangleNet.Topology;
-
     /// <summary>
     /// Iterates the region a given triangle belongs to and applies an action
     /// to each connected trianlge in that region. 
@@ -20,11 +20,11 @@ namespace TriangleNet.Meshing.Iterators
     /// </remarks>
     public class RegionIterator
     {
-        List<Triangle> region;
+        private readonly List<Triangle> region;
 
         public RegionIterator(Mesh mesh)
         {
-            this.region = new List<Triangle>();
+            region = new List<Triangle>();
         }
 
         /// <summary>
@@ -33,15 +33,12 @@ namespace TriangleNet.Meshing.Iterators
         /// <param name="triangle">The triangle seed.</param>
         /// <param name="boundary">If non-zero, process all triangles of the
         /// region that is enclosed by segments with given boundary label.</param>
-        public void Process(Triangle triangle, int boundary = 0)
+        public void Process(Triangle triangle, int boundary = 0) => Process(triangle, tri =>
         {
-            this.Process(triangle, (tri) =>
-            {
-                // Set the region id and area constraint.
-                tri.label = triangle.label;
-                tri.area = triangle.area;
-            }, boundary);
-        }
+            // Set the region id and area constraint.
+            tri.label = triangle.label;
+            tri.area = triangle.area;
+        }, boundary);
 
         /// <summary>
         /// Process all trianlges connected to given triangle and apply given action.
@@ -84,16 +81,16 @@ namespace TriangleNet.Meshing.Iterators
         /// </summary>
         /// <param name="action"></param>
         /// <param name="protector"></param>
-        void ProcessRegion(Action<Triangle> action, Func<SubSegment, bool> protector)
+        private void ProcessRegion(Action<Triangle> action, Func<SubSegment, bool> protector)
         {
-            Otri testtri = default(Otri);
-            Otri neighbor = default(Otri);
-            Osub neighborsubseg = default(Osub);
+            var testtri = default(Otri);
+            var neighbor = default(Otri);
+            var neighborsubseg = default(Osub);
 
             // Loop through all the infected triangles, spreading the attribute
             // and/or area constraint to their neighbors, then to their neighbors'
             // neighbors.
-            for (int i = 0; i < region.Count; i++)
+            for (var i = 0; i < region.Count; i++)
             {
                 // WARNING: Don't use foreach, viri list gets modified.
 
@@ -109,10 +106,10 @@ namespace TriangleNet.Meshing.Iterators
                     testtri.Sym(ref neighbor);
                     // Check for a subsegment between the triangle and its neighbor.
                     testtri.Pivot(ref neighborsubseg);
+
                     // Make sure the neighbor exists, is not already infected, and
                     // isn't protected by a subsegment.
-                    if ((neighbor.tri.id != Mesh.DUMMY) && !neighbor.IsInfected()
-                        && protector(neighborsubseg.seg))
+                    if (neighbor.tri.id != Mesh.DUMMY && !neighbor.IsInfected() && protector(neighborsubseg.seg))
                     {
                         // Infect the neighbor.
                         neighbor.Infect();

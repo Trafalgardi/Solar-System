@@ -5,15 +5,14 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+using TriangleNet.Topology.DCEL;
+
 namespace TriangleNet.Voronoi
 {
-    using System.Collections.Generic;
-
-    using TriangleNet.Topology;
-    using TriangleNet.Geometry;
-    using TriangleNet.Topology.DCEL;
-
-    using Vertex = TriangleNet.Topology.DCEL.Vertex;
+    using Vertex = Topology.DCEL.Vertex;
 
     /// <summary>
     /// The Voronoi diagram is the dual of a pointset triangulation.
@@ -38,7 +37,7 @@ namespace TriangleNet.Voronoi
         /// method, which builds the Voronoi diagram.</param>
         protected VoronoiBase(Mesh mesh, IVoronoiFactory factory, IPredicates predicates,
             bool generate)
-            : base(false)
+            : base(initialize: false)
         {
             this.factory = factory;
             this.predicates = predicates;
@@ -58,8 +57,8 @@ namespace TriangleNet.Voronoi
         {
             mesh.Renumber();
 
-            base.edges = new List<HalfEdge>();
-            this.rays = new List<HalfEdge>();
+            edges = new List<HalfEdge>();
+            rays = new List<HalfEdge>();
 
             // Allocate space for Voronoi diagram.
             var vertices = new Vertex[mesh.triangles.Count + mesh.hullsize];
@@ -86,8 +85,8 @@ namespace TriangleNet.Voronoi
             // At this point all edges are computed, but the (edge.next) pointers aren't set.
             ConnectEdges(map);
 
-            base.vertices = new List<Vertex>(vertices);
-            base.faces = new List<Face>(faces);
+            this.vertices = new List<Vertex>(vertices);
+            this.faces = new List<Face>(faces);
         }
 
         /// <summary>
@@ -96,7 +95,7 @@ namespace TriangleNet.Voronoi
         /// <returns>An empty map, which will map all vertices to a list of leaving edges.</returns>
         protected List<HalfEdge>[] ComputeVertices(Mesh mesh, Vertex[] vertices)
         {
-            Otri tri = default(Otri);
+            var tri = default(Otri);
             double xi = 0, eta = 0;
             Vertex vertex;
             Point pt;
@@ -132,7 +131,7 @@ namespace TriangleNet.Voronoi
         /// <param name="map">Empty vertex map.</param>
         protected void ComputeEdges(Mesh mesh, Vertex[] vertices, Face[] faces, List<HalfEdge>[] map)
         {
-            Otri tri, neighbor = default(Otri);
+            Otri tri, neighbor = default;
             TriangleNet.Geometry.Vertex org, dest;
 
             double px, py;
@@ -143,10 +142,10 @@ namespace TriangleNet.Voronoi
             Vertex vertex, end;
 
             // Count infinte edges (vertex id for their endpoints).
-            int j = 0;
+            var j = 0;
 
             // Count half-edges (edge ids).
-            int k = 0;
+            var k = 0;
 
             // To loop over the set of edges, loop over all triangles, and look at the
             // three edges of each triangle.  If there isn't another triangle adjacent
@@ -159,7 +158,7 @@ namespace TriangleNet.Voronoi
 
                 tri.tri = t;
 
-                for (int i = 0; i < 3; i++)
+                for (var i = 0; i < 3; i++)
                 {
                     tri.orient = i;
                     tri.Sym(ref neighbor);
@@ -225,8 +224,8 @@ namespace TriangleNet.Voronoi
                         edge.id = k++;
                         twin.id = k++;
 
-                        this.edges.Add(edge);
-                        this.edges.Add(twin);
+                        edges.Add(edge);
+                        edges.Add(twin);
                     }
                 }
             }
@@ -238,15 +237,15 @@ namespace TriangleNet.Voronoi
         /// <param name="map">Maps all vertices to a list of leaving edges.</param>
         protected virtual void ConnectEdges(List<HalfEdge>[] map)
         {
-            int length = map.Length;
+            var length = map.Length;
 
             // For each half-edge, find its successor in the connected face.
-            foreach (var edge in this.edges)
+            foreach (var edge in edges)
             {
                 var face = edge.face.generator.id;
 
                 // The id of the dest vertex of current edge.
-                int id = edge.twin.origin.id;
+                var id = edge.twin.origin.id;
 
                 // The edge origin can also be an infinite vertex. Sort them out
                 // by checking the id.
@@ -259,6 +258,7 @@ namespace TriangleNet.Voronoi
                         if (next.face.generator.id == face)
                         {
                             edge.next = next;
+
                             break;
                         }
                     }

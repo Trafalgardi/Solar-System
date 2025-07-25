@@ -4,13 +4,13 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.Voronoi.Legacy
 {
-    using System;
-    using System.Collections.Generic;
-    using TriangleNet.Topology;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// The Bounded Voronoi Diagram is the dual of a PSLG triangulation.
     /// </summary>
@@ -18,30 +18,30 @@ namespace TriangleNet.Voronoi.Legacy
     /// 2D Centroidal Voronoi Tessellations with Constraints, 2010,
     /// Jane Tournois, Pierre Alliez and Olivier Devillers
     /// </remarks>
-    [Obsolete("Use TriangleNet.Voronoi.BoundedVoronoi class instead.")]
+    [Obsolete(message: "Use TriangleNet.Voronoi.BoundedVoronoi class instead.")]
     public class BoundedVoronoiLegacy : IVoronoi
     {
-        IPredicates predicates = RobustPredicates.Default;
+        private readonly IPredicates predicates = RobustPredicates.Default;
 
-        Mesh mesh;
+        private readonly Mesh mesh;
 
-        Point[] points;
-        List<VoronoiRegion> regions;
+        private Point[] points;
+        private List<VoronoiRegion> regions;
 
         // Used for new points on segments.
-        List<Point> segPoints;
-        int segIndex;
+        private List<Point> segPoints;
+        private int segIndex;
 
-        Dictionary<int, SubSegment> subsegMap;
+        private Dictionary<int, SubSegment> subsegMap;
 
-        bool includeBoundary = true;
+        private readonly bool includeBoundary = true;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BoundedVoronoiLegacy" /> class.
         /// </summary>
         /// <param name="mesh">Mesh instance.</param>
         public BoundedVoronoiLegacy(Mesh mesh)
-            : this(mesh, true)
+            : this(mesh, includeBoundary: true)
         {
         }
 
@@ -60,23 +60,14 @@ namespace TriangleNet.Voronoi.Legacy
         /// <summary>
         /// Gets the list of Voronoi vertices.
         /// </summary>
-        public Point[] Points
-        {
-            get { return points; }
-        }
+        public Point[] Points => points;
 
         /// <summary>
         /// Gets the list of Voronoi regions.
         /// </summary>
-        public ICollection<VoronoiRegion> Regions
-        {
-            get { return regions; }
-        }
+        public ICollection<VoronoiRegion> Regions => regions;
 
-        public IEnumerable<IEdge> Edges
-        {
-            get { return EnumerateEdges(); }
-        }
+        public IEnumerable<IEdge> Edges => EnumerateEdges();
 
         /// <summary>
         /// Computes the bounded voronoi diagram.
@@ -87,10 +78,10 @@ namespace TriangleNet.Voronoi.Legacy
             mesh.MakeVertexMap();
 
             // Allocate space for voronoi diagram
-            this.regions = new List<VoronoiRegion>(mesh.vertices.Count);
+            regions = new List<VoronoiRegion>(mesh.vertices.Count);
 
-            this.points = new Point[mesh.triangles.Count];
-            this.segPoints = new List<Point>(mesh.subsegs.Count * 4);
+            points = new Point[mesh.triangles.Count];
+            segPoints = new List<Point>(mesh.subsegs.Count * 4);
 
             ComputeCircumCenters();
 
@@ -110,22 +101,22 @@ namespace TriangleNet.Voronoi.Legacy
             }
 
             // Add the new points on segments to the point array.
-            int length = points.Length;
+            var length = points.Length;
 
-            Array.Resize<Point>(ref points, length + segPoints.Count);
+            Array.Resize(ref points, length + segPoints.Count);
 
-            for (int i = 0; i < segPoints.Count; i++)
+            for (var i = 0; i < segPoints.Count; i++)
             {
                 points[length + i] = segPoints[i];
             }
 
-            this.segPoints.Clear();
-            this.segPoints = null;
+            segPoints.Clear();
+            segPoints = null;
         }
 
         private void ComputeCircumCenters()
         {
-            Otri tri = default(Otri);
+            var tri = default(Otri);
             double xi = 0, eta = 0;
             Point pt;
 
@@ -150,15 +141,15 @@ namespace TriangleNet.Voronoi.Legacy
         /// </remarks>
         private void TagBlindTriangles()
         {
-            int blinded = 0;
+            var blinded = 0;
 
             Stack<Triangle> triangles;
             subsegMap = new Dictionary<int, SubSegment>();
 
-            Otri f = default(Otri);
-            Otri f0 = default(Otri);
-            Osub e = default(Osub);
-            Osub sub1 = default(Osub);
+            var f = default(Otri);
+            var f0 = default(Otri);
+            var e = default(Osub);
+            var sub1 = default(Osub);
 
             // Tag all triangles non-blind
             foreach (var t in mesh.triangles)
@@ -241,26 +232,26 @@ namespace TriangleNet.Voronoi.Legacy
         {
             Point c, pt;
 
-            Vertex torg = tri.Org();
-            Vertex tdest = tri.Dest();
-            Vertex tapex = tri.Apex();
+            var torg = tri.Org();
+            var tdest = tri.Dest();
+            var tapex = tri.Apex();
 
-            Vertex sorg = seg.Org();
-            Vertex sdest = seg.Dest();
+            var sorg = seg.Org();
+            var sdest = seg.Dest();
 
-            c = this.points[tri.tri.id];
+            c = points[tri.tri.id];
 
-            if (SegmentsIntersect(sorg, sdest, c, torg, out pt, true))
+            if (SegmentsIntersect(sorg, sdest, c, torg, out pt, strictIntersect: true))
             {
                 return true;
             }
 
-            if (SegmentsIntersect(sorg, sdest, c, tdest, out pt, true))
+            if (SegmentsIntersect(sorg, sdest, c, tdest, out pt, strictIntersect: true))
             {
                 return true;
             }
 
-            if (SegmentsIntersect(sorg, sdest, c, tapex, out pt, true))
+            if (SegmentsIntersect(sorg, sdest, c, tapex, out pt, strictIntersect: true))
             {
                 return true;
             }
@@ -270,28 +261,28 @@ namespace TriangleNet.Voronoi.Legacy
 
         private void ConstructCell(Vertex vertex)
         {
-            VoronoiRegion region = new VoronoiRegion(vertex);
+            var region = new VoronoiRegion(vertex);
             regions.Add(region);
 
-            Otri f = default(Otri);
-            Otri f_init = default(Otri);
-            Otri f_next = default(Otri);
-            Osub sf = default(Osub);
-            Osub sfn = default(Osub);
+            var f = default(Otri);
+            var f_init = default(Otri);
+            var f_next = default(Otri);
+            var sf = default(Osub);
+            var sfn = default(Osub);
 
             Point cc_f, cc_f_next, p;
 
-            int n = mesh.triangles.Count;
+            var n = mesh.triangles.Count;
 
             // Call P the polygon (cell) in construction
-            List<Point> vpoints = new List<Point>();
+            var vpoints = new List<Point>();
 
             // Call f_init a triangle incident to x
             vertex.tri.Copy(ref f_init);
 
             if (f_init.Org() != vertex)
             {
-                throw new Exception("ConstructCell: inconsistent topology.");
+                throw new Exception(message: "ConstructCell: inconsistent topology.");
             }
 
             // Let f be initialized to f_init
@@ -303,8 +294,8 @@ namespace TriangleNet.Voronoi.Legacy
             do
             {
                 // Call Lffnext the line going through the circumcenters of f and f_next
-                cc_f = this.points[f.tri.id];
-                cc_f_next = this.points[f_next.tri.id];
+                cc_f = points[f.tri.id];
+                cc_f_next = points[f_next.tri.id];
 
                 // if f is tagged non-blind then
                 if (!f.tri.infected)
@@ -318,7 +309,7 @@ namespace TriangleNet.Voronoi.Legacy
                         sfn.seg = subsegMap[f_next.tri.hash];
 
                         // Insert point Lf,f_next /\ Sf_next into P
-                        if (SegmentsIntersect(sfn.Org(), sfn.Dest(), cc_f, cc_f_next, out p, true))
+                        if (SegmentsIntersect(sfn.Org(), sfn.Dest(), cc_f, cc_f_next, out p, strictIntersect: true))
                         {
                             p.id = n + segIndex++;
                             segPoints.Add(p);
@@ -335,7 +326,7 @@ namespace TriangleNet.Voronoi.Legacy
                     if (!f_next.tri.infected)
                     {
                         // Insert point Lf,f_next /\ Sf into P
-                        if (SegmentsIntersect(sf.Org(), sf.Dest(), cc_f, cc_f_next, out p, true))
+                        if (SegmentsIntersect(sf.Org(), sf.Dest(), cc_f, cc_f_next, out p, strictIntersect: true))
                         {
                             p.id = n + segIndex++;
                             segPoints.Add(p);
@@ -351,14 +342,14 @@ namespace TriangleNet.Voronoi.Legacy
                         if (!sf.Equal(sfn))
                         {
                             // Insert Lf,fnext /\ Sf and Lf,fnext /\ Sfnext into P
-                            if (SegmentsIntersect(sf.Org(), sf.Dest(), cc_f, cc_f_next, out p, true))
+                            if (SegmentsIntersect(sf.Org(), sf.Dest(), cc_f, cc_f_next, out p, strictIntersect: true))
                             {
                                 p.id = n + segIndex++;
                                 segPoints.Add(p);
                                 vpoints.Add(p);
                             }
 
-                            if (SegmentsIntersect(sfn.Org(), sfn.Dest(), cc_f, cc_f_next, out p, true))
+                            if (SegmentsIntersect(sfn.Org(), sfn.Dest(), cc_f, cc_f_next, out p, strictIntersect: true))
                             {
                                 p.id = n + segIndex++;
                                 segPoints.Add(p);
@@ -373,8 +364,7 @@ namespace TriangleNet.Voronoi.Legacy
 
                 // Call f_next the next triangle counterclockwise around x
                 f_next.Onext();
-            }
-            while (!f.Equals(f_init));
+            } while (!f.Equals(f_init));
 
             // Output: Bounded Voronoi cell of x in counterclockwise order.
             region.Add(vpoints);
@@ -382,31 +372,32 @@ namespace TriangleNet.Voronoi.Legacy
 
         private void ConstructBoundaryCell(Vertex vertex)
         {
-            VoronoiRegion region = new VoronoiRegion(vertex);
+            var region = new VoronoiRegion(vertex);
             regions.Add(region);
 
-            Otri f = default(Otri);
-            Otri f_init = default(Otri);
-            Otri f_next = default(Otri);
-            Otri f_prev = default(Otri);
-            Osub sf = default(Osub);
-            Osub sfn = default(Osub);
+            var f = default(Otri);
+            var f_init = default(Otri);
+            var f_next = default(Otri);
+            var f_prev = default(Otri);
+            var sf = default(Osub);
+            var sfn = default(Osub);
 
             Vertex torg, tdest, tapex, sorg, sdest;
             Point cc_f, cc_f_next, p;
 
-            int n = mesh.triangles.Count;
+            var n = mesh.triangles.Count;
 
             // Call P the polygon (cell) in construction
-            List<Point> vpoints = new List<Point>();
+            var vpoints = new List<Point>();
 
             // Call f_init a triangle incident to x
             vertex.tri.Copy(ref f_init);
 
             if (f_init.Org() != vertex)
             {
-                throw new Exception("ConstructBoundaryCell: inconsistent topology.");
+                throw new Exception(message: "ConstructBoundaryCell: inconsistent topology.");
             }
+
             // Let f be initialized to f_init
             f_init.Copy(ref f);
             // Call f_next the next triangle counterclockwise around x
@@ -452,7 +443,7 @@ namespace TriangleNet.Voronoi.Legacy
             do
             {
                 // Call Lffnext the line going through the circumcenters of f and f_next
-                cc_f = this.points[f.tri.id];
+                cc_f = points[f.tri.id];
 
                 if (f_next.tri.id == Mesh.DUMMY)
                 {
@@ -475,7 +466,7 @@ namespace TriangleNet.Voronoi.Legacy
                     break;
                 }
 
-                cc_f_next = this.points[f_next.tri.id];
+                cc_f_next = points[f_next.tri.id];
 
                 // if f is tagged non-blind then
                 if (!f.tri.infected)
@@ -489,7 +480,7 @@ namespace TriangleNet.Voronoi.Legacy
                         sfn.seg = subsegMap[f_next.tri.hash];
 
                         // Insert point Lf,f_next /\ Sf_next into P
-                        if (SegmentsIntersect(sfn.Org(), sfn.Dest(), cc_f, cc_f_next, out p, true))
+                        if (SegmentsIntersect(sfn.Org(), sfn.Dest(), cc_f, cc_f_next, out p, strictIntersect: true))
                         {
                             p.id = n + segIndex++;
                             segPoints.Add(p);
@@ -515,10 +506,10 @@ namespace TriangleNet.Voronoi.Legacy
                         // have to add the intersection with the segment.
 
                         // Center of f edge dest->apex
-                        Point bisec = new Point((tdest.x + tapex.x) / 2, (tdest.y + tapex.y) / 2);
+                        var bisec = new Point((tdest.x + tapex.x) / 2, (tdest.y + tapex.y) / 2);
 
                         // Find intersection of seg with line through f's bisector and circumcenter
-                        if (SegmentsIntersect(sorg, sdest, bisec, cc_f, out p, false))
+                        if (SegmentsIntersect(sorg, sdest, bisec, cc_f, out p, strictIntersect: false))
                         {
                             p.id = n + segIndex++;
                             segPoints.Add(p);
@@ -526,7 +517,7 @@ namespace TriangleNet.Voronoi.Legacy
                         }
 
                         // Insert point Lf,f_next /\ Sf into P
-                        if (SegmentsIntersect(sorg, sdest, cc_f, cc_f_next, out p, true))
+                        if (SegmentsIntersect(sorg, sdest, cc_f, cc_f_next, out p, strictIntersect: true))
                         {
                             p.id = n + segIndex++;
                             segPoints.Add(p);
@@ -542,14 +533,14 @@ namespace TriangleNet.Voronoi.Legacy
                         if (!sf.Equal(sfn))
                         {
                             // Insert Lf,fnext /\ Sf and Lf,fnext /\ Sfnext into P
-                            if (SegmentsIntersect(sorg, sdest, cc_f, cc_f_next, out p, true))
+                            if (SegmentsIntersect(sorg, sdest, cc_f, cc_f_next, out p, strictIntersect: true))
                             {
                                 p.id = n + segIndex++;
                                 segPoints.Add(p);
                                 vpoints.Add(p);
                             }
 
-                            if (SegmentsIntersect(sfn.Org(), sfn.Dest(), cc_f, cc_f_next, out p, true))
+                            if (SegmentsIntersect(sfn.Org(), sfn.Dest(), cc_f, cc_f_next, out p, strictIntersect: true))
                             {
                                 p.id = n + segIndex++;
                                 segPoints.Add(p);
@@ -562,10 +553,10 @@ namespace TriangleNet.Voronoi.Legacy
                             // have to add the intersection with the segment.
 
                             // Center of f_next edge org->dest
-                            Point bisec = new Point((torg.x + tdest.x) / 2, (torg.y + tdest.y) / 2);
+                            var bisec = new Point((torg.x + tdest.x) / 2, (torg.y + tdest.y) / 2);
 
                             // Find intersection of seg with line through f_next's bisector and circumcenter
-                            if (SegmentsIntersect(sorg, sdest, bisec, cc_f_next, out p, false))
+                            if (SegmentsIntersect(sorg, sdest, bisec, cc_f_next, out p, strictIntersect: false))
                             {
                                 p.id = n + segIndex++;
                                 segPoints.Add(p);
@@ -580,8 +571,7 @@ namespace TriangleNet.Voronoi.Legacy
 
                 // Call f_next the next triangle counterclockwise around x
                 f_next.Onext();
-            }
-            while (!f.Equals(f_init));
+            } while (!f.Equals(f_init));
 
             // Output: Bounded Voronoi cell of x in counterclockwise order.
             region.Add(vpoints);
@@ -612,19 +602,24 @@ namespace TriangleNet.Voronoi.Legacy
             double distAB, theCos, theSin, newX, ABpos;
 
             //  Fail if either line segment is zero-length.
-            if (Ax == Bx && Ay == By || Cx == Dx && Cy == Dy) return false;
+            if ((Ax == Bx && Ay == By) || (Cx == Dx && Cy == Dy))
+            {
+                return false;
+            }
 
             //  Fail if the segments share an end-point.
-            if (Ax == Cx && Ay == Cy || Bx == Cx && By == Cy
-            || Ax == Dx && Ay == Dy || Bx == Dx && By == Dy)
+            if ((Ax == Cx && Ay == Cy) || (Bx == Cx && By == Cy) || (Ax == Dx && Ay == Dy) || (Bx == Dx && By == Dy))
             {
                 return false;
             }
 
             //  (1) Translate the system so that point A is on the origin.
-            Bx -= Ax; By -= Ay;
-            Cx -= Ax; Cy -= Ay;
-            Dx -= Ax; Dy -= Ay;
+            Bx -= Ax;
+            By -= Ay;
+            Cx -= Ax;
+            Cy -= Ay;
+            Dx -= Ax;
+            Dy -= Ay;
 
             //  Discover the length of segment A-B.
             distAB = Math.Sqrt(Bx * Bx + By * By);
@@ -633,18 +628,26 @@ namespace TriangleNet.Voronoi.Legacy
             theCos = Bx / distAB;
             theSin = By / distAB;
             newX = Cx * theCos + Cy * theSin;
-            Cy = Cy * theCos - Cx * theSin; Cx = newX;
+            Cy = Cy * theCos - Cx * theSin;
+            Cx = newX;
             newX = Dx * theCos + Dy * theSin;
-            Dy = Dy * theCos - Dx * theSin; Dx = newX;
+            Dy = Dy * theCos - Dx * theSin;
+            Dx = newX;
 
             //  Fail if segment C-D doesn't cross line A-B.
-            if (Cy < 0 && Dy < 0 || Cy >= 0 && Dy >= 0 && strictIntersect) return false;
+            if ((Cy < 0 && Dy < 0) || (Cy >= 0 && Dy >= 0 && strictIntersect))
+            {
+                return false;
+            }
 
             //  (3) Discover the position of the intersection point along line A-B.
             ABpos = Dx + (Cx - Dx) * Dy / (Dy - Cy);
 
             //  Fail if segment C-D crosses line A-B outside of segment A-B.
-            if (ABpos < 0 || ABpos > distAB && strictIntersect) return false;
+            if (ABpos < 0 || (ABpos > distAB && strictIntersect))
+            {
+                return false;
+            }
 
             //  (4) Apply the discovered position to line A-B in the original coordinate system.
             p = new Point(Ax + ABpos * theCos, Ay + ABpos * theSin);
@@ -659,8 +662,9 @@ namespace TriangleNet.Voronoi.Legacy
         {
             // Copy edges
             Point first, last;
-            var edges = new List<IEdge>(this.Regions.Count * 2);
-            foreach (var region in this.Regions)
+            var edges = new List<IEdge>(Regions.Count * 2);
+
+            foreach (var region in Regions)
             {
                 first = null;
                 last = null;

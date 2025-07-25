@@ -1,59 +1,65 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 
-public class SettingsMenu : MonoBehaviour {
+public class SettingsMenu : MonoBehaviour
+{
+    private bool inMenu;
 
-	bool inMenu;
-	public GameObject menuPanel;
-	public InputSettings inputSettings;
-	public TMP_InputField mouseSensitivity;
-	public UnityEngine.UI.Slider mouseSmoothingSlider;
+    private void Awake() => menuPanel.SetActive(value: false);
+    public GameObject menuPanel;
+    public InputSettings inputSettings;
+    public TMP_InputField mouseSensitivity;
+    public UnityEngine.UI.Slider mouseSmoothingSlider;
 
-	void Awake () {
-		menuPanel.SetActive (false);
-	}
+    public void OpenMenu()
+    {
+        inMenu = true;
+        Time.timeScale = 0;
+        menuPanel.SetActive(value: true);
 
-	void Update () {
-		if (Input.GetKeyDown (KeyCode.Escape) || Input.GetKeyDown (KeyCode.P)) {
-			if (inMenu) {
-				CloseMenu ();
-			} else {
-				OpenMenu ();
-			}
-		}
-	}
+        mouseSensitivity.text = inputSettings.mouseSensitivity + "";
+        mouseSmoothingSlider.value = inputSettings.mouseSmoothing;
 
-	public void OpenMenu () {
-		inMenu = true;
-		Time.timeScale = 0;
-		menuPanel.SetActive (true);
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+    }
 
-		mouseSensitivity.text = inputSettings.mouseSensitivity + "";
-		mouseSmoothingSlider.value = inputSettings.mouseSmoothing;
+    public void CloseMenu()
+    {
+        inMenu = false;
+        Time.timeScale = 1;
+        menuPanel.SetActive(value: false);
 
-		Cursor.visible = true;
-		Cursor.lockState = CursorLockMode.None;
-	}
+        int sensitivity;
 
-	public void CloseMenu () {
-		inMenu = false;
-		Time.timeScale = 1;
-		menuPanel.SetActive (false);
+        if (int.TryParse(mouseSensitivity.text, out sensitivity))
+        {
+            inputSettings.mouseSensitivity = sensitivity;
+        }
 
-		int sensitivity;
-		if (int.TryParse (mouseSensitivity.text, out sensitivity)) {
-			inputSettings.mouseSensitivity = sensitivity;
-		}
+        inputSettings.mouseSmoothing = mouseSmoothingSlider.value;
 
-		inputSettings.mouseSmoothing = mouseSmoothingSlider.value;
+        inputSettings.SaveSettings();
 
-		inputSettings.SaveSettings ();
+        if (inputSettings.lockCursor)
+        {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+    }
 
-		if (inputSettings.lockCursor) {
-			Cursor.visible = false;
-			Cursor.lockState = CursorLockMode.Locked;
-		}
-	}
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
+        {
+            if (inMenu)
+            {
+                CloseMenu();
+            }
+            else
+            {
+                OpenMenu();
+            }
+        }
+    }
 }

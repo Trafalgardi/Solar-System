@@ -4,16 +4,16 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+using TriangleNet.Meshing;
+
 namespace TriangleNet.IO
 {
-    using System;
-    using System.Collections.Generic;
-    using TriangleNet.Geometry;
-    using TriangleNet.Meshing;
-
     public static class FileProcessor
     {
-        static List<IFileFormat> formats;
+        private static readonly List<IFileFormat> formats;
 
         static FileProcessor()
         {
@@ -23,10 +23,7 @@ namespace TriangleNet.IO
             formats.Add(new TriangleFormat());
         }
 
-        public static void Add(IFileFormat format)
-        {
-            formats.Add(format);
-        }
+        public static void Add(IFileFormat format) => formats.Add(format);
 
         public static bool IsSupported(string file)
         {
@@ -58,7 +55,7 @@ namespace TriangleNet.IO
                 }
             }
 
-            throw new Exception("File format not supported.");
+            throw new Exception(message: "File format not supported.");
         }
 
         /// <summary>
@@ -73,11 +70,12 @@ namespace TriangleNet.IO
                 if (format != null && format.IsSupported(filename))
                 {
                     format.Write(polygon, filename);
+
                     return;
                 }
             }
 
-            throw new Exception("File format not supported.");
+            throw new Exception(message: "File format not supported.");
         }
 
         #endregion
@@ -99,7 +97,7 @@ namespace TriangleNet.IO
                 }
             }
 
-            throw new Exception("File format not supported.");
+            throw new Exception(message: "File format not supported.");
         }
 
         /// <summary>
@@ -114,11 +112,12 @@ namespace TriangleNet.IO
                 if (format != null && format.IsSupported(filename))
                 {
                     format.Write(mesh, filename);
+
                     return;
                 }
             }
 
-            throw new Exception("File format not supported.");
+            throw new Exception(message: "File format not supported.");
         }
 
         #endregion

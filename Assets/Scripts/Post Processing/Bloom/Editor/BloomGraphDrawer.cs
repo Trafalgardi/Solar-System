@@ -21,138 +21,157 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+
 using UnityEditor;
 using UnityEngine;
 
-namespace Kino {
-	// Class used for drawing the brightness response curve
-	public class BloomGraphDrawer {
-		#region Public Methods
+namespace Kino
+{
+    // Class used for drawing the brightness response curve
+    public class BloomGraphDrawer
+    {
+        #region Public Methods
 
-		// Update internal state with a given bloom instance.
-		public void Prepare (BloomEffect bloom) {
+        // Update internal state with a given bloom instance.
+        public void Prepare(BloomEffect bloom)
+        {
+            _rangeX = 6;
+            _rangeY = 1.5f;
 
-			_rangeX = 6;
-			_rangeY = 1.5f;
+            _threshold = bloom.thresholdLinear;
+            _knee = bloom.softKnee * _threshold + 1e-5f;
 
-			_threshold = bloom.thresholdLinear;
-			_knee = bloom.softKnee * _threshold + 1e-5f;
+            // Intensity is capped to prevent sampling errors.
+            _intensity = Mathf.Min(bloom.intensity, b: 10);
+        }
 
-			// Intensity is capped to prevent sampling errors.
-			_intensity = Mathf.Min (bloom.intensity, 10);
-		}
+        // Draw the graph at the current position.
+        public void DrawGraph()
+        {
+            _rectGraph = GUILayoutUtility.GetRect(width: 128, height: 80);
 
-		// Draw the graph at the current position.
-		public void DrawGraph () {
-			_rectGraph = GUILayoutUtility.GetRect (128, 80);
+            // Background
+            DrawRect(x1: 0, y1: 0, _rangeX, _rangeY, fill: 0.1f, line: 0.4f);
 
-			// Background
-			DrawRect (0, 0, _rangeX, _rangeY, 0.1f, 0.4f);
+            // Soft-knee range
+            DrawRect(_threshold - _knee, y1: 0, _threshold + _knee, _rangeY, fill: 0.25f, line: -1);
 
-			// Soft-knee range
-			DrawRect (_threshold - _knee, 0, _threshold + _knee, _rangeY, 0.25f, -1);
+            // Horizontal lines
+            for (var i = 1; i < _rangeY; i++)
+            {
+                DrawLine(x1: 0, i, _rangeX, i, grayscale: 0.4f);
+            }
 
-			// Horizontal lines
-			for (var i = 1; i < _rangeY; i++)
-				DrawLine (0, i, _rangeX, i, 0.4f);
+            // Vertical lines
+            for (var i = 1; i < _rangeX; i++)
+            {
+                DrawLine(i, y1: 0, i, _rangeY, grayscale: 0.4f);
+            }
 
-			// Vertical lines
-			for (var i = 1; i < _rangeX; i++)
-				DrawLine (i, 0, i, _rangeY, 0.4f);
+            // Label
+            Handles.Label(PointInRect(x: 0, _rangeY) + Vector3.right,
+                text: "Brightness Response (linear)", EditorStyles.miniLabel);
 
-			// Label
-			Handles.Label (
-				PointInRect (0, _rangeY) + Vector3.right,
-				"Brightness Response (linear)", EditorStyles.miniLabel
-			);
+            // Threshold line
+            DrawLine(_threshold, y1: 0, _threshold, _rangeY, grayscale: 0.6f);
 
-			// Threshold line
-			DrawLine (_threshold, 0, _threshold, _rangeY, 0.6f);
+            // Response curve
+            var vcount = 0;
 
-			// Response curve
-			var vcount = 0;
-			while (vcount < _curveResolution) {
-				var x = _rangeX * vcount / (_curveResolution - 1);
-				var y = ResponseFunction (x);
-				if (y < _rangeY) {
-					_curveVertices[vcount++] = PointInRect (x, y);
-				} else {
-					if (vcount > 1) {
-						// Extend the last segment to the top edge of the rect.
-						var v1 = _curveVertices[vcount - 2];
-						var v2 = _curveVertices[vcount - 1];
-						var clip = (_rectGraph.y - v1.y) / (v2.y - v1.y);
-						_curveVertices[vcount - 1] = v1 + (v2 - v1) * clip;
-					}
-					break;
-				}
-			}
+            while (vcount < _curveResolution)
+            {
+                var x = _rangeX * vcount / (_curveResolution - 1);
+                var y = ResponseFunction(x);
 
-			if (vcount > 1) {
-				Handles.color = Color.white * 0.9f;
-				Handles.DrawAAPolyLine (2.0f, vcount, _curveVertices);
-			}
-		}
+                if (y < _rangeY)
+                {
+                    _curveVertices[vcount++] = PointInRect(x, y);
+                }
+                else
+                {
+                    if (vcount > 1)
+                    {
+                        // Extend the last segment to the top edge of the rect.
+                        var v1 = _curveVertices[vcount - 2];
+                        var v2 = _curveVertices[vcount - 1];
+                        var clip = (_rectGraph.y - v1.y) / (v2.y - v1.y);
+                        _curveVertices[vcount - 1] = v1 + (v2 - v1) * clip;
+                    }
 
-		#endregion
+                    break;
+                }
+            }
 
-		#region Response Function
+            if (vcount > 1)
+            {
+                Handles.color = Color.white * 0.9f;
+                Handles.DrawAAPolyLine(width: 2.0f, vcount, _curveVertices);
+            }
+        }
 
-		float _threshold;
-		float _knee;
-		float _intensity;
+        #endregion
 
-		float ResponseFunction (float x) {
-			var rq = Mathf.Clamp (x - _threshold + _knee, 0, _knee * 2);
-			rq = rq * rq * 0.25f / _knee;
-			return Mathf.Max (rq, x - _threshold) * _intensity;
-		}
+        #region Response Function
 
-		#endregion
+        private float _threshold;
+        private float _knee;
+        private float _intensity;
 
-		#region Graph Functions
+        private float ResponseFunction(float x)
+        {
+            var rq = Mathf.Clamp(x - _threshold + _knee, min: 0, _knee * 2);
+            rq = rq * rq * 0.25f / _knee;
 
-		// Number of vertices in curve
-		const int _curveResolution = 96;
+            return Mathf.Max(rq, x - _threshold) * _intensity;
+        }
 
-		// Vertex buffers
-		Vector3[] _rectVertices = new Vector3[4];
-		Vector3[] _lineVertices = new Vector3[2];
-		Vector3[] _curveVertices = new Vector3[_curveResolution];
+        #endregion
 
-		Rect _rectGraph;
-		float _rangeX;
-		float _rangeY;
+        #region Graph Functions
 
-		// Transform a point into the graph rect.
-		Vector3 PointInRect (float x, float y) {
-			x = Mathf.Lerp (_rectGraph.x, _rectGraph.xMax, x / _rangeX);
-			y = Mathf.Lerp (_rectGraph.yMax, _rectGraph.y, y / _rangeY);
-			return new Vector3 (x, y, 0);
-		}
+        // Number of vertices in curve
+        private const int _curveResolution = 96;
 
-		// Draw a line in the graph rect.
-		void DrawLine (float x1, float y1, float x2, float y2, float grayscale) {
-			_lineVertices[0] = PointInRect (x1, y1);
-			_lineVertices[1] = PointInRect (x2, y2);
-			Handles.color = Color.white * grayscale;
-			Handles.DrawAAPolyLine (2.0f, _lineVertices);
-		}
+        // Vertex buffers
+        private readonly Vector3[] _rectVertices = new Vector3[4];
+        private readonly Vector3[] _lineVertices = new Vector3[2];
+        private readonly Vector3[] _curveVertices = new Vector3[_curveResolution];
 
-		// Draw a rect in the graph rect.
-		void DrawRect (float x1, float y1, float x2, float y2, float fill, float line) {
-			_rectVertices[0] = PointInRect (x1, y1);
-			_rectVertices[1] = PointInRect (x2, y1);
-			_rectVertices[2] = PointInRect (x2, y2);
-			_rectVertices[3] = PointInRect (x1, y2);
+        private Rect _rectGraph;
+        private float _rangeX;
+        private float _rangeY;
 
-			Handles.DrawSolidRectangleWithOutline (
-				_rectVertices,
-				fill < 0 ? Color.clear : Color.white * fill,
-				line < 0 ? Color.clear : Color.white * line
-			);
-		}
+        // Transform a point into the graph rect.
+        private Vector3 PointInRect(float x, float y)
+        {
+            x = Mathf.Lerp(_rectGraph.x, _rectGraph.xMax, x / _rangeX);
+            y = Mathf.Lerp(_rectGraph.yMax, _rectGraph.y, y / _rangeY);
 
-		#endregion
-	}
+            return new Vector3(x, y, z: 0);
+        }
+
+        // Draw a line in the graph rect.
+        private void DrawLine(float x1, float y1, float x2, float y2, float grayscale)
+        {
+            _lineVertices[0] = PointInRect(x1, y1);
+            _lineVertices[1] = PointInRect(x2, y2);
+            Handles.color = Color.white * grayscale;
+            Handles.DrawAAPolyLine(width: 2.0f, _lineVertices);
+        }
+
+        // Draw a rect in the graph rect.
+        private void DrawRect(float x1, float y1, float x2, float y2, float fill, float line)
+        {
+            _rectVertices[0] = PointInRect(x1, y1);
+            _rectVertices[1] = PointInRect(x2, y1);
+            _rectVertices[2] = PointInRect(x2, y2);
+            _rectVertices[3] = PointInRect(x1, y2);
+
+            Handles.DrawSolidRectangleWithOutline(_rectVertices,
+                fill < 0 ? Color.clear : Color.white * fill,
+                line < 0 ? Color.clear : Color.white * line);
+        }
+
+        #endregion
+    }
 }

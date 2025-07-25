@@ -5,11 +5,10 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Topology
 {
-    using System;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// An oriented subsegment.
     /// </summary>
@@ -20,13 +19,7 @@ namespace TriangleNet.Topology
     /// </remarks>
     public struct Osub
     {
-        internal SubSegment seg;
-        internal int orient; // Ranges from 0 to 1.
-
-        public SubSegment Segment
-        {
-            get { return seg; }
-        }
+        public SubSegment Segment => seg;
 
         public override string ToString()
         {
@@ -34,8 +27,12 @@ namespace TriangleNet.Topology
             {
                 return "O-TID [null]";
             }
-            return String.Format("O-SID {0}", seg.hash);
+
+            return string.Format(format: "O-SID {0}", seg.hash);
         }
+
+        internal SubSegment seg;
+        internal int orient; // Ranges from 0 to 1.
 
         #region Osub primitives
 
@@ -51,10 +48,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Reverse the orientation of a subsegment. [sym(ab) -> ba]
         /// </summary>
-        public void Sym()
-        {
-            orient = 1 - orient;
-        }
+        public void Sym() => orient = 1 - orient;
 
         /// <summary>
         /// Find adjoining subsegment with the same origin. [pivot(ab) -> a*]
@@ -62,51 +56,32 @@ namespace TriangleNet.Topology
         /// <remarks>spivot() finds the other subsegment (from the same segment) 
         /// that shares the same origin.
         /// </remarks>
-        public void Pivot(ref Osub os)
-        {
-            os = seg.subsegs[orient];
-        }
+        public void Pivot(ref Osub os) => os = seg.subsegs[orient];
 
         /// <summary>
         /// Finds a triangle abutting a subsegment.
         /// </summary>
-        internal void Pivot(ref Otri ot)
-        {
-            ot = seg.triangles[orient];
-        }
+        internal void Pivot(ref Otri ot) => ot = seg.triangles[orient];
 
         /// <summary>
         /// Find next subsegment in sequence. [next(ab) -> b*]
         /// </summary>
-        public void Next(ref Osub ot)
-        {
-            ot = seg.subsegs[1 - orient];
-        }
+        public void Next(ref Osub ot) => ot = seg.subsegs[1 - orient];
 
         /// <summary>
         /// Find next subsegment in sequence. [next(ab) -> b*]
         /// </summary>
-        public void Next()
-        {
-            this = seg.subsegs[1 - orient];
-        }
+        public void Next() => this = seg.subsegs[1 - orient];
 
         /// <summary>
         /// Get the origin of a subsegment
         /// </summary>
-        public Vertex Org()
-        {
-            return seg.vertices[orient];
-        }
+        public Vertex Org() => seg.vertices[orient];
 
         /// <summary>
         /// Get the destination of a subsegment
         /// </summary>
-        public Vertex Dest()
-        {
-            return seg.vertices[1 - orient];
-        }
-
+        public Vertex Dest() => seg.vertices[1 - orient];
 
         #endregion
 
@@ -115,50 +90,32 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Set the origin or destination of a subsegment.
         /// </summary>
-        internal void SetOrg(Vertex vertex)
-        {
-            seg.vertices[orient] = vertex;
-        }
+        internal void SetOrg(Vertex vertex) => seg.vertices[orient] = vertex;
 
         /// <summary>
         /// Set destination of a subsegment.
         /// </summary>
-        internal void SetDest(Vertex vertex)
-        {
-            seg.vertices[1 - orient] = vertex;
-        }
+        internal void SetDest(Vertex vertex) => seg.vertices[1 - orient] = vertex;
 
         /// <summary>
         /// Get the origin of the segment that includes the subsegment.
         /// </summary>
-        internal Vertex SegOrg()
-        {
-            return seg.vertices[2 + orient];
-        }
+        internal Vertex SegOrg() => seg.vertices[2 + orient];
 
         /// <summary>
         /// Get the destination of the segment that includes the subsegment.
         /// </summary>
-        internal Vertex SegDest()
-        {
-            return seg.vertices[3 - orient];
-        }
+        internal Vertex SegDest() => seg.vertices[3 - orient];
 
         /// <summary>
         /// Set the origin of the segment that includes the subsegment.
         /// </summary>
-        internal void SetSegOrg(Vertex vertex)
-        {
-            seg.vertices[2 + orient] = vertex;
-        }
+        internal void SetSegOrg(Vertex vertex) => seg.vertices[2 + orient] = vertex;
 
         /// <summary>
         /// Set the destination of the segment that includes the subsegment.
         /// </summary>
-        internal void SetSegDest(Vertex vertex)
-        {
-            seg.vertices[3 - orient] = vertex;
-        }
+        internal void SetSegDest(Vertex vertex) => seg.vertices[3 - orient] = vertex;
 
         /* Unused primitives.
 
@@ -173,7 +130,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Read a boundary marker.
         /// </summary>
-        /// <remarks>Boundary markers are used to hold user-defined tags for 
+        /// <remarks>Boundary markers are used to hold user-defined tags for
         /// setting boundary conditions in finite element solvers.</remarks>
         public int Mark()
         {
@@ -213,34 +170,22 @@ namespace TriangleNet.Topology
         /// </summary>
         /// <remarks>Note that the other subsegment will still think it's 
         /// connected to this subsegment.</remarks>
-        internal void Dissolve(SubSegment dummy)
-        {
-            seg.subsegs[orient].seg = dummy;
-        }
+        internal void Dissolve(SubSegment dummy) => seg.subsegs[orient].seg = dummy;
 
         /// <summary>
         /// Test for equality of subsegments.
         /// </summary>
-        internal bool Equal(Osub os)
-        {
-            return ((seg == os.seg) && (orient == os.orient));
-        }
+        internal bool Equal(Osub os) => seg == os.seg && orient == os.orient;
 
         /// <summary>
         /// Dissolve a bond (from the subsegment side).
         /// </summary>
-        internal void TriDissolve(Triangle dummy)
-        {
-            seg.triangles[orient].tri = dummy;
-        }
+        internal void TriDissolve(Triangle dummy) => seg.triangles[orient].tri = dummy;
 
         /// <summary>
         /// Check a subsegment's deallocation.
         /// </summary>
-        internal static bool IsDead(SubSegment sub)
-        {
-            return sub.subsegs[0].seg == null;
-        }
+        internal static bool IsDead(SubSegment sub) => sub.subsegs[0].seg == null;
 
         /// <summary>
         /// Set a subsegment's deallocation.

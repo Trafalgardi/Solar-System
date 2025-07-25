@@ -4,11 +4,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Voronoi.Legacy
 {
-    using System.Collections.Generic;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// Voronoi diagram interface.
     /// </summary>

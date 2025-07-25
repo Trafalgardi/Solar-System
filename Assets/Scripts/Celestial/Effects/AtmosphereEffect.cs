@@ -1,42 +1,43 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class AtmosphereEffect {
+public class AtmosphereEffect
+{
+    private Light light;
+    protected Material material;
 
-	Light light;
-	protected Material material;
+    public void UpdateSettings(CelestialBodyGenerator generator)
+    {
+        var shader = generator.body.shading.atmosphereSettings.atmosphereShader;
 
-	public void UpdateSettings (CelestialBodyGenerator generator) {
+        if (material == null || material.shader != shader)
+        {
+            material = new Material(shader);
+        }
 
-		Shader shader = generator.body.shading.atmosphereSettings.atmosphereShader;
+        if (light == null)
+        {
+            light = GameObject.FindObjectOfType<SunShadowCaster>()?.GetComponent<Light>();
+        }
 
-		if (material == null || material.shader != shader) {
-			material = new Material (shader);
-		}
+        //generator.shading.SetAtmosphereProperties (material);
+        generator.body.shading.atmosphereSettings.SetProperties(material, generator.BodyScale);
 
-		if (light == null) {
-			light = GameObject.FindObjectOfType<SunShadowCaster> ()?.GetComponent<Light> ();
-		}
+        material.SetVector(name: "planetCentre", generator.transform.position);
+        //material.SetFloat ("atmosphereRadius", (1 + 0.5f) * generator.BodyScale);
+        material.SetFloat(name: "oceanRadius", generator.GetOceanRadius());
 
-		//generator.shading.SetAtmosphereProperties (material);
-		generator.body.shading.atmosphereSettings.SetProperties (material, generator.BodyScale);
+        if (light)
+        {
+            var dirFromPlanetToSun = (light.transform.position - generator.transform.position).normalized;
+            //Debug.Log(dirFromPlanetToSun);
+            material.SetVector(name: "dirToSun", dirFromPlanetToSun);
+        }
+        else
+        {
+            material.SetVector(name: "dirToSun", Vector3.up);
+            Debug.Log(message: "No SunShadowCaster found");
+        }
+    }
 
-		material.SetVector ("planetCentre", generator.transform.position);
-		//material.SetFloat ("atmosphereRadius", (1 + 0.5f) * generator.BodyScale);
-		material.SetFloat ("oceanRadius", generator.GetOceanRadius ());
-
-		if (light) {
-			Vector3 dirFromPlanetToSun = (light.transform.position - generator.transform.position).normalized;
-			//Debug.Log(dirFromPlanetToSun);
-			material.SetVector ("dirToSun", dirFromPlanetToSun);
-		} else {
-			material.SetVector ("dirToSun", Vector3.up);
-			Debug.Log ("No SunShadowCaster found");
-		}
-	}
-
-	public Material GetMaterial () {
-		return material;
-	}
+    public Material GetMaterial() => material;
 }

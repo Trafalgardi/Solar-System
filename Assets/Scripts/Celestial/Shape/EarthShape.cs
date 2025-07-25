@@ -1,38 +1,35 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-[CreateAssetMenu (menuName = "Celestial Body/Earth-Like/Earth Shape")]
-public class EarthShape : CelestialBodyShape {
+[CreateAssetMenu(menuName = "Celestial Body/Earth-Like/Earth Shape")]
+public class EarthShape : CelestialBodyShape
+{
+    [Header(header: "Continent settings")] public float oceanDepthMultiplier = 5;
 
-	[Header ("Continent settings")]
-	public float oceanDepthMultiplier = 5;
-	public float oceanFloorDepth = 1.5f;
-	public float oceanFloorSmoothing = 0.5f;
+    public float oceanFloorDepth = 1.5f;
+    public float oceanFloorSmoothing = 0.5f;
 
-	public float mountainBlend = 1.2f; // Determines how smoothly the base of mountains blends into the terrain
+    public float mountainBlend = 1.2f; // Determines how smoothly the base of mountains blends into the terrain
 
-	[Header ("Noise settings")]
-	public SimpleNoiseSettings continentNoise;
-	public SimpleNoiseSettings maskNoise;
+    [Header(header: "Noise settings")] public SimpleNoiseSettings continentNoise;
 
-	public RidgeNoiseSettings ridgeNoise;
-	public Vector4 testParams;
+    public SimpleNoiseSettings maskNoise;
 
-	protected override void SetShapeData () {
-		var prng = new PRNG (seed);
-		continentNoise.SetComputeValues (heightMapCompute, prng, "_continents");
-		ridgeNoise.SetComputeValues (heightMapCompute, prng, "_mountains");
-		maskNoise.SetComputeValues (heightMapCompute, prng, "_mask");
+    public RidgeNoiseSettings ridgeNoise;
+    public Vector4 testParams;
 
-		heightMapCompute.SetFloat ("oceanDepthMultiplier", oceanDepthMultiplier);
-		heightMapCompute.SetFloat ("oceanFloorDepth", oceanFloorDepth);
-		heightMapCompute.SetFloat ("oceanFloorSmoothing", oceanFloorSmoothing);
-		heightMapCompute.SetFloat ("mountainBlend", mountainBlend);
-		heightMapCompute.SetVector ("params", testParams);
+    protected override void SetShapeData()
+    {
+        var prng = new PRNG(seed);
+        continentNoise.SetComputeValues(heightMapCompute, prng, varSuffix: "_continents");
+        ridgeNoise.SetComputeValues(heightMapCompute, prng, varSuffix: "_mountains");
+        maskNoise.SetComputeValues(heightMapCompute, prng, varSuffix: "_mask");
 
-		//
+        heightMapCompute.SetFloat(name: "oceanDepthMultiplier", oceanDepthMultiplier);
+        heightMapCompute.SetFloat(name: "oceanFloorDepth", oceanFloorDepth);
+        heightMapCompute.SetFloat(name: "oceanFloorSmoothing", oceanFloorSmoothing);
+        heightMapCompute.SetFloat(name: "mountainBlend", mountainBlend);
+        heightMapCompute.SetVector(name: "params", testParams);
 
-	}
-
+        //
+    }
 }

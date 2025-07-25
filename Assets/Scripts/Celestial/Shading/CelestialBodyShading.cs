@@ -1,117 +1,137 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 /*
-	Responsible for the shading of a celestial body.
-	This is paired with a specific CelestialBodyShape.
+    Responsible for the shading of a celestial body.
+    This is paired with a specific CelestialBodyShape.
 */
 
-public abstract class CelestialBodyShading : ScriptableObject {
+public abstract class CelestialBodyShading : ScriptableObject
+{
+    private ComputeBuffer shadingBuffer;
 
-	public event System.Action OnSettingChanged;
+    protected Vector4[] cachedShadingData;
 
-	public bool randomize;
-	public int seed;
+    public bool randomize;
+    public int seed;
 
-	public Material terrainMaterial = null;
-	public bool hasAtmosphere;
-	public AtmosphereSettings atmosphereSettings;
-	public bool hasOcean;
-	[Range (0, 1)]
-	public float oceanLevel;
-	public OceanSettings oceanSettings;
+    public Material terrainMaterial;
+    public bool hasAtmosphere;
+    public AtmosphereSettings atmosphereSettings;
+    public bool hasOcean;
 
-	public ComputeShader shadingDataCompute;
+    [Range(min: 0, max: 1)] public float oceanLevel;
 
-	protected Vector4[] cachedShadingData;
-	ComputeBuffer shadingBuffer;
+    public OceanSettings oceanSettings;
 
-	// 
-	public virtual void Initialize (CelestialBodyShape shape) { }
+    public ComputeShader shadingDataCompute;
 
-	// Generate Vector4[] of shading data. This is stored in mesh uvs and used to help shade the body
-	public Vector4[] GenerateShadingData (ComputeBuffer vertexBuffer) {
-		int numVertices = vertexBuffer.count;
-		Vector4[] shadingData = new Vector4[numVertices];
+    public event System.Action OnSettingChanged;
 
-		if (shadingDataCompute) {
-			// Set data
-			SetShadingDataComputeProperties ();
+    // 
+    public virtual void Initialize(CelestialBodyShape shape)
+    {
+    }
 
-			shadingDataCompute.SetInt ("numVertices", numVertices);
-			shadingDataCompute.SetBuffer (0, "vertices", vertexBuffer);
-			ComputeHelper.CreateAndSetBuffer<Vector4> (ref shadingBuffer, numVertices, shadingDataCompute, "shadingData");
+    // Generate Vector4[] of shading data. This is stored in mesh uvs and used to help shade the body
+    public Vector4[] GenerateShadingData(ComputeBuffer vertexBuffer)
+    {
+        var numVertices = vertexBuffer.count;
+        var shadingData = new Vector4[numVertices];
 
-			// Run
-			ComputeHelper.Run (shadingDataCompute, numVertices);
+        if (shadingDataCompute)
+        {
+            // Set data
+            SetShadingDataComputeProperties();
 
-			// Get data
-			shadingBuffer.GetData (shadingData);
-		}
+            shadingDataCompute.SetInt(name: "numVertices", numVertices);
+            shadingDataCompute.SetBuffer(kernelIndex: 0, name: "vertices", vertexBuffer);
 
-		cachedShadingData = shadingData;
-		return shadingData;
-	}
+            ComputeHelper.CreateAndSetBuffer<Vector4>(ref shadingBuffer, numVertices, shadingDataCompute,
+                nameID: "shadingData");
 
-	// Set shading properties on terrain
-	public virtual void SetTerrainProperties (Material material, Vector2 heightMinMax, float bodyScale) {
+            // Run
+            ComputeHelper.Run(shadingDataCompute, numVertices);
 
-	}
+            // Get data
+            shadingBuffer.GetData(shadingData);
+        }
 
-	public virtual void SetOceanProperties (Material oceanMaterial) {
-		if (oceanSettings) {
-			oceanSettings.SetProperties (oceanMaterial, seed, randomize);
-		}
-	}
+        cachedShadingData = shadingData;
 
-	// Override this to set properties on the shadingDataCompute before it is run
-	protected virtual void SetShadingDataComputeProperties () {
+        return shadingData;
+    }
 
-	}
+    // Set shading properties on terrain
+    public virtual void SetTerrainProperties(Material material, Vector2 heightMinMax, float bodyScale)
+    {
+    }
 
-	public virtual void ReleaseBuffers () {
-		ComputeHelper.Release (shadingBuffer);
-	}
+    public virtual void SetOceanProperties(Material oceanMaterial)
+    {
+        if (oceanSettings)
+        {
+            oceanSettings.SetProperties(oceanMaterial, seed, randomize);
+        }
+    }
 
-	public static void TextureFromGradient (ref Texture2D texture, int width, Gradient gradient, FilterMode filterMode = FilterMode.Bilinear) {
-		if (texture == null) {
-			texture = new Texture2D (width, 1);
-		} else if (texture.width != width) {
-			texture.Reinitialize (width, 1);
-		}
-		if (gradient == null) {
-			gradient = new Gradient ();
-			gradient.SetKeys (
-				new GradientColorKey[] { new GradientColorKey (Color.black, 0), new GradientColorKey (Color.black, 1) },
-				new GradientAlphaKey[] { new GradientAlphaKey (1, 0), new GradientAlphaKey (1, 1) }
-			);
-		}
-		texture.wrapMode = TextureWrapMode.Clamp;
-		texture.filterMode = filterMode;
+    public virtual void ReleaseBuffers() => ComputeHelper.Release(shadingBuffer);
 
-		Color[] cols = new Color[width];
-		for (int i = 0; i < cols.Length; i++) {
-			float t = i / (cols.Length - 1f);
-			cols[i] = gradient.Evaluate (t);
-		}
-		texture.SetPixels (cols);
-		texture.Apply ();
-	}
+    public static void TextureFromGradient(ref Texture2D texture, int width, Gradient gradient,
+        FilterMode filterMode = FilterMode.Bilinear)
+    {
+        if (texture == null)
+        {
+            texture = new Texture2D(width, height: 1);
+        }
+        else if (texture.width != width)
+        {
+            texture.Reinitialize(width, height: 1);
+        }
 
-	protected virtual void OnValidate () {
-		/*
-		Shader activeShader = (shader) ? shader : Shader.Find ("Unlit/Color");
-		if (material == null || material.shader != activeShader) {
-		    if (material == null) {
-		        material = new Material (activeShader);
-		    } else {
-		        material.shader = activeShader;
-		    }
-		}
-		*/
-		if (OnSettingChanged != null) {
-			OnSettingChanged ();
-		}
-	}
+        if (gradient == null)
+        {
+            gradient = new Gradient();
+
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.black, time: 0), new GradientColorKey(Color.black, time: 1), },
+                new[] { new GradientAlphaKey(alpha: 1, time: 0), new GradientAlphaKey(alpha: 1, time: 1), });
+        }
+
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = filterMode;
+
+        var cols = new Color[width];
+
+        for (var i = 0; i < cols.Length; i++)
+        {
+            var t = i / (cols.Length - 1f);
+            cols[i] = gradient.Evaluate(t);
+        }
+
+        texture.SetPixels(cols);
+        texture.Apply();
+    }
+
+    // Override this to set properties on the shadingDataCompute before it is run
+    protected virtual void SetShadingDataComputeProperties()
+    {
+    }
+
+    protected virtual void OnValidate()
+    {
+        /*
+        Shader activeShader = (shader) ? shader : Shader.Find ("Unlit/Color");
+        if (material == null || material.shader != activeShader) {
+            if (material == null) {
+                material = new Material (activeShader);
+            } else {
+                material.shader = activeShader;
+            }
+        }
+        */
+        if (OnSettingChanged != null)
+        {
+            OnSettingChanged();
+        }
+    }
 }

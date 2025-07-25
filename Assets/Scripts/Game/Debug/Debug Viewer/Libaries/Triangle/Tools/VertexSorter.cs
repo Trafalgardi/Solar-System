@@ -5,11 +5,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using TriangleNet.Geometry;
+
 namespace TriangleNet.Tools
 {
-    using System;
-    using TriangleNet.Geometry;
-
     /// <summary>
     /// Sort an array of points using quicksort.
     /// </summary>
@@ -17,14 +17,14 @@ namespace TriangleNet.Tools
     {
         private const int RANDOM_SEED = 57113;
 
-        Random rand;
+        private readonly Random rand;
 
-        Vertex[] points;
+        private readonly Vertex[] points;
 
-        VertexSorter(Vertex[] points, int seed)
+        private VertexSorter(Vertex[] points, int seed)
         {
             this.points = points;
-            this.rand = new Random(seed);
+            rand = new Random(seed);
         }
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace TriangleNet.Tools
         {
             var qs = new VertexSorter(array, seed);
 
-            qs.QuickSort(0, array.Length - 1);
+            qs.QuickSort(left: 0, array.Length - 1);
         }
 
         /// <summary>
@@ -49,17 +49,17 @@ namespace TriangleNet.Tools
         {
             var qs = new VertexSorter(array, seed);
 
-            int divider = length >> 1;
+            var divider = length >> 1;
 
             // Re-sort the array of vertices to accommodate alternating cuts.
             if (length - divider >= 2)
             {
                 if (divider >= 2)
                 {
-                    qs.AlternateAxes(0, divider - 1, 1);
+                    qs.AlternateAxes(left: 0, divider - 1, axis: 1);
                 }
 
-                qs.AlternateAxes(divider, length - 1, 1);
+                qs.AlternateAxes(divider, length - 1, axis: 1);
             }
         }
 
@@ -76,27 +76,29 @@ namespace TriangleNet.Tools
         /// </remarks>
         private void QuickSort(int left, int right)
         {
-            int oleft = left;
-            int oright = right;
-            int arraysize = right - left + 1;
+            var oleft = left;
+            var oright = right;
+            var arraysize = right - left + 1;
             int pivot;
             double pivotx, pivoty;
             Vertex temp;
 
-            var array = this.points;
+            var array = points;
 
             if (arraysize < 32)
             {
                 // Insertion sort
-                for (int i = left + 1; i <= right; i++)
+                for (var i = left + 1; i <= right; i++)
                 {
                     var a = array[i];
-                    int j = i - 1;
+                    var j = i - 1;
+
                     while (j >= left && (array[j].x > a.x || (array[j].x == a.x && array[j].y > a.y)))
                     {
                         array[j + 1] = array[j];
                         j--;
                     }
+
                     array[j + 1] = a;
                 }
 
@@ -110,23 +112,24 @@ namespace TriangleNet.Tools
             // Split the array.
             left--;
             right++;
+
             while (left < right)
             {
                 // Search for a vertex whose x-coordinate is too large for the left.
                 do
                 {
                     left++;
-                }
-                while ((left <= right) && ((array[left].x < pivotx) ||
-                    ((array[left].x == pivotx) && (array[left].y < pivoty))));
+                } while (left <= right &&
+                         (array[left].x < pivotx ||
+                          (array[left].x == pivotx && array[left].y < pivoty)));
 
                 // Search for a vertex whose x-coordinate is too small for the right.
                 do
                 {
                     right--;
-                }
-                while ((left <= right) && ((array[right].x > pivotx) ||
-                    ((array[right].x == pivotx) && (array[right].y > pivoty))));
+                } while (left <= right &&
+                         (array[right].x > pivotx ||
+                          (array[right].x == pivotx && array[right].y > pivoty)));
 
                 if (left < right)
                 {
@@ -168,8 +171,8 @@ namespace TriangleNet.Tools
         /// </remarks>
         private void AlternateAxes(int left, int right, int axis)
         {
-            int size = right - left + 1;
-            int divider = size >> 1;
+            var size = right - left + 1;
+            var divider = size >> 1;
 
             if (size <= 3)
             {
@@ -213,25 +216,26 @@ namespace TriangleNet.Tools
         /// </remarks>
         private void VertexMedianX(int left, int right, int median)
         {
-            int arraysize = right - left + 1;
+            var arraysize = right - left + 1;
             int oleft = left, oright = right;
             int pivot;
             double pivot1, pivot2;
             Vertex temp;
 
-            var array = this.points;
+            var array = points;
 
             if (arraysize == 2)
             {
                 // Recursive base case.
-                if ((array[left].x > array[right].x) ||
-                    ((array[left].x == array[right].x) &&
-                     (array[left].y > array[right].y)))
+                if (array[left].x > array[right].x ||
+                    (array[left].x == array[right].x &&
+                     array[left].y > array[right].y))
                 {
                     temp = array[right];
                     array[right] = array[left];
                     array[left] = temp;
                 }
+
                 return;
             }
 
@@ -242,23 +246,24 @@ namespace TriangleNet.Tools
 
             left--;
             right++;
+
             while (left < right)
             {
                 // Search for a vertex whose x-coordinate is too large for the left.
                 do
                 {
                     left++;
-                }
-                while ((left <= right) && ((array[left].x < pivot1) ||
-                    ((array[left].x == pivot1) && (array[left].y < pivot2))));
+                } while (left <= right &&
+                         (array[left].x < pivot1 ||
+                          (array[left].x == pivot1 && array[left].y < pivot2)));
 
                 // Search for a vertex whose x-coordinate is too small for the right.
                 do
                 {
                     right--;
-                }
-                while ((left <= right) && ((array[right].x > pivot1) ||
-                    ((array[right].x == pivot1) && (array[right].y > pivot2))));
+                } while (left <= right &&
+                         (array[right].x > pivot1 ||
+                          (array[right].x == pivot1 && array[right].y > pivot2)));
 
                 if (left < right)
                 {
@@ -296,25 +301,26 @@ namespace TriangleNet.Tools
         /// </remarks>
         private void VertexMedianY(int left, int right, int median)
         {
-            int arraysize = right - left + 1;
+            var arraysize = right - left + 1;
             int oleft = left, oright = right;
             int pivot;
             double pivot1, pivot2;
             Vertex temp;
 
-            var array = this.points;
+            var array = points;
 
             if (arraysize == 2)
             {
                 // Recursive base case.
-                if ((array[left].y > array[right].y) ||
-                    ((array[left].y == array[right].y) &&
-                     (array[left].x > array[right].x)))
+                if (array[left].y > array[right].y ||
+                    (array[left].y == array[right].y &&
+                     array[left].x > array[right].x))
                 {
                     temp = array[right];
                     array[right] = array[left];
                     array[left] = temp;
                 }
+
                 return;
             }
 
@@ -325,23 +331,24 @@ namespace TriangleNet.Tools
 
             left--;
             right++;
+
             while (left < right)
             {
                 // Search for a vertex whose x-coordinate is too large for the left.
                 do
                 {
                     left++;
-                }
-                while ((left <= right) && ((array[left].y < pivot1) ||
-                    ((array[left].y == pivot1) && (array[left].x < pivot2))));
+                } while (left <= right &&
+                         (array[left].y < pivot1 ||
+                          (array[left].y == pivot1 && array[left].x < pivot2)));
 
                 // Search for a vertex whose x-coordinate is too small for the right.
                 do
                 {
                     right--;
-                }
-                while ((left <= right) && ((array[right].y > pivot1) ||
-                    ((array[right].y == pivot1) && (array[right].x > pivot2))));
+                } while (left <= right &&
+                         (array[right].y > pivot1 ||
+                          (array[right].y == pivot1 && array[right].x > pivot2)));
 
                 if (left < right)
                 {

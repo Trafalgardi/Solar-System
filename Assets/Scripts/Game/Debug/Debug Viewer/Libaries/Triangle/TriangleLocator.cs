@@ -5,11 +5,11 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet
 {
-    using TriangleNet.Geometry;
-    using TriangleNet.Topology;
-
     /// <summary>
     /// Locate triangles in a mesh.
     /// </summary>
@@ -24,14 +24,10 @@ namespace TriangleNet
     /// </remarks>
     public class TriangleLocator
     {
-        TriangleSampler sampler;
-        Mesh mesh;
+        private readonly TriangleSampler sampler;
+        private readonly Mesh mesh;
 
-        IPredicates predicates;
-
-        // Pointer to a recently visited triangle. Improves point location if
-        // proximate vertices are inserted sequentially.
-        internal Otri recenttri;
+        private readonly IPredicates predicates;
 
         public TriangleLocator(Mesh mesh)
             : this(mesh, RobustPredicates.Default)
@@ -50,10 +46,7 @@ namespace TriangleNet
         /// Suggest the given triangle as a starting triangle for point location.
         /// </summary>
         /// <param name="otri"></param>
-        public void Update(ref Otri otri)
-        {
-            otri.Copy(ref recenttri);
-        }
+        public void Update(ref Otri otri) => otri.Copy(ref recenttri);
 
         public void Reset()
         {
@@ -130,8 +123,8 @@ namespace TriangleNet
         public LocateResult PreciseLocate(Point searchpoint, ref Otri searchtri,
             bool stopatsubsegment)
         {
-            Otri backtracktri = default(Otri);
-            Osub checkedge = default(Osub);
+            var backtracktri = default(Otri);
+            var checkedge = default(Osub);
             Vertex forg, fdest, fapex;
             double orgorient, destorient;
             bool moveleft;
@@ -140,20 +133,24 @@ namespace TriangleNet
             forg = searchtri.Org();
             fdest = searchtri.Dest();
             fapex = searchtri.Apex();
+
             while (true)
             {
                 // Check whether the apex is the point we seek.
-                if ((fapex.x == searchpoint.x) && (fapex.y == searchpoint.y))
+                if (fapex.x == searchpoint.x && fapex.y == searchpoint.y)
                 {
                     searchtri.Lprev();
+
                     return LocateResult.OnVertex;
                 }
+
                 // Does the point lie on the other side of the line defined by the
                 // triangle edge opposite the triangle's destination?
                 destorient = predicates.CounterClockwise(forg, fapex, searchpoint);
                 // Does the point lie on the other side of the line defined by the
                 // triangle edge opposite the triangle's origin?
                 orgorient = predicates.CounterClockwise(fapex, fdest, searchpoint);
+
                 if (destorient > 0.0)
                 {
                     if (orgorient > 0.0)
@@ -164,7 +161,8 @@ namespace TriangleNet
                         // through 'fapex', and determining which side of this line
                         // 'searchpoint' falls on.
                         moveleft = (fapex.x - searchpoint.x) * (fdest.x - forg.x) +
-                                   (fapex.y - searchpoint.y) * (fdest.y - forg.y) > 0.0;
+                                   (fapex.y - searchpoint.y) * (fdest.y - forg.y) >
+                                   0.0;
                     }
                     else
                     {
@@ -184,13 +182,17 @@ namespace TriangleNet
                         if (destorient == 0.0)
                         {
                             searchtri.Lprev();
+
                             return LocateResult.OnEdge;
                         }
+
                         if (orgorient == 0.0)
                         {
                             searchtri.Lnext();
+
                             return LocateResult.OnEdge;
                         }
+
                         return LocateResult.InTriangle;
                     }
                 }
@@ -208,24 +210,29 @@ namespace TriangleNet
                     searchtri.Lnext(ref backtracktri);
                     forg = fapex;
                 }
+
                 backtracktri.Sym(ref searchtri);
 
                 if (mesh.checksegments && stopatsubsegment)
                 {
                     // Check for walking through a subsegment.
                     backtracktri.Pivot(ref checkedge);
+
                     if (checkedge.seg.hash != Mesh.DUMMY)
                     {
                         // Go back to the last triangle.
                         backtracktri.Copy(ref searchtri);
+
                         return LocateResult.Outside;
                     }
                 }
+
                 // Check for walking right out of the triangulation.
                 if (searchtri.tri.id == Mesh.DUMMY)
                 {
                     // Go back to the last triangle.
                     backtracktri.Copy(ref searchtri);
+
                     return LocateResult.Outside;
                 }
 
@@ -272,7 +279,7 @@ namespace TriangleNet
         /// </remarks>
         public LocateResult Locate(Point searchpoint, ref Otri searchtri)
         {
-            Otri sampletri = default(Otri);
+            var sampletri = default(Otri);
             Vertex torg, tdest;
             double searchdist, dist;
             double ahead;
@@ -280,6 +287,7 @@ namespace TriangleNet
             // Record the distance from the suggested starting triangle to the
             // point we seek.
             torg = searchtri.Org();
+
             searchdist = (searchpoint.x - torg.x) * (searchpoint.x - torg.x) +
                          (searchpoint.y - torg.y) * (searchpoint.y - torg.y);
 
@@ -290,13 +298,17 @@ namespace TriangleNet
                 if (!Otri.IsDead(recenttri.tri))
                 {
                     torg = recenttri.Org();
-                    if ((torg.x == searchpoint.x) && (torg.y == searchpoint.y))
+
+                    if (torg.x == searchpoint.x && torg.y == searchpoint.y)
                     {
                         recenttri.Copy(ref searchtri);
+
                         return LocateResult.OnVertex;
                     }
+
                     dist = (searchpoint.x - torg.x) * (searchpoint.x - torg.x) +
                            (searchpoint.y - torg.y) * (searchpoint.y - torg.y);
+
                     if (dist < searchdist)
                     {
                         recenttri.Copy(ref searchtri);
@@ -311,11 +323,14 @@ namespace TriangleNet
             foreach (var t in sampler)
             {
                 sampletri.tri = t;
+
                 if (!Otri.IsDead(sampletri.tri))
                 {
                     torg = sampletri.Org();
+
                     dist = (searchpoint.x - torg.x) * (searchpoint.x - torg.x) +
                            (searchpoint.y - torg.y) * (searchpoint.y - torg.y);
+
                     if (dist < searchdist)
                     {
                         sampletri.Copy(ref searchtri);
@@ -329,18 +344,21 @@ namespace TriangleNet
             tdest = searchtri.Dest();
 
             // Check the starting triangle's vertices.
-            if ((torg.x == searchpoint.x) && (torg.y == searchpoint.y))
+            if (torg.x == searchpoint.x && torg.y == searchpoint.y)
             {
                 return LocateResult.OnVertex;
             }
-            if ((tdest.x == searchpoint.x) && (tdest.y == searchpoint.y))
+
+            if (tdest.x == searchpoint.x && tdest.y == searchpoint.y)
             {
                 searchtri.Lnext();
+
                 return LocateResult.OnVertex;
             }
 
             // Orient 'searchtri' to fit the preconditions of calling preciselocate().
             ahead = predicates.CounterClockwise(torg, tdest, searchpoint);
+
             if (ahead < 0.0)
             {
                 // Turn around so that 'searchpoint' is to the left of the
@@ -350,14 +368,18 @@ namespace TriangleNet
             else if (ahead == 0.0)
             {
                 // Check if 'searchpoint' is between 'torg' and 'tdest'.
-                if (((torg.x < searchpoint.x) == (searchpoint.x < tdest.x)) &&
-                    ((torg.y < searchpoint.y) == (searchpoint.y < tdest.y)))
+                if (torg.x < searchpoint.x == searchpoint.x < tdest.x &&
+                    torg.y < searchpoint.y == searchpoint.y < tdest.y)
                 {
                     return LocateResult.OnEdge;
                 }
             }
 
-            return PreciseLocate(searchpoint, ref searchtri, false);
+            return PreciseLocate(searchpoint, ref searchtri, stopatsubsegment: false);
         }
+
+        // Pointer to a recently visited triangle. Improves point location if
+        // proximate vertices are inserted sequentially.
+        internal Otri recenttri;
     }
 }

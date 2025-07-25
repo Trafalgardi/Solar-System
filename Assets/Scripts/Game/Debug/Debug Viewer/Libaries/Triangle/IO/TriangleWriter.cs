@@ -5,20 +5,20 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using TriangleNet.Geometry;
+using TriangleNet.Topology;
+
 namespace TriangleNet.IO
 {
-    using System.Collections.Generic;
-    using System.Globalization;
-    using System.IO;
-    using TriangleNet.Geometry;
-    using TriangleNet.Topology;
-
     /// <summary>
     /// Helper methods for writing Triangle file formats.
     /// </summary>
     public class TriangleWriter
     {
-        static NumberFormatInfo nfi = NumberFormatInfo.InvariantInfo;
+        private static readonly NumberFormatInfo nfi = NumberFormatInfo.InvariantInfo;
 
         /// <summary>
         /// Number the vertices and write them to a .node file.
@@ -27,8 +27,8 @@ namespace TriangleNet.IO
         /// <param name="filename"></param>
         public void Write(Mesh mesh, string filename)
         {
-            WritePoly(mesh, Path.ChangeExtension(filename, ".poly"));
-            WriteElements(mesh, Path.ChangeExtension(filename, ".ele"));
+            WritePoly(mesh, Path.ChangeExtension(filename, extension: ".poly"));
+            WriteElements(mesh, Path.ChangeExtension(filename, extension: ".ele"));
         }
 
         /// <summary>
@@ -45,115 +45,24 @@ namespace TriangleNet.IO
         }
 
         /// <summary>
-        /// Number the vertices and write them to a .node file.
-        /// </summary>
-        private void WriteNodes(StreamWriter writer, Mesh mesh)
-        {
-            int outvertices = mesh.vertices.Count;
-            int nextras = 0;
-
-            Behavior behavior = mesh.behavior;
-
-            if (behavior.Jettison)
-            {
-                outvertices = mesh.vertices.Count - mesh.undeads;
-            }
-
-            if (writer != null)
-            {
-                // Number of vertices, number of dimensions, number of vertex attributes,
-                // and number of boundary markers (zero or one).
-                writer.WriteLine("{0} {1} {2} {3}", outvertices, mesh.mesh_dim, nextras,
-                    behavior.UseBoundaryMarkers ? "1" : "0");
-
-                if (mesh.numbering == NodeNumbering.None)
-                {
-                    // If the mesh isn't numbered yet, use linear node numbering.
-                    mesh.Renumber();
-                }
-
-                if (mesh.numbering == NodeNumbering.Linear)
-                {
-                    // If numbering is linear, just use the dictionary values.
-                    WriteNodes(writer, mesh.vertices.Values, behavior.UseBoundaryMarkers,
-                        nextras, behavior.Jettison);
-                }
-                else
-                {
-                    // If numbering is not linear, a simple 'foreach' traversal of the dictionary
-                    // values doesn't reflect the actual numbering. Use an array instead.
-
-                    // TODO: Could use a custom sorting function on dictionary values instead.
-                    Vertex[] nodes = new Vertex[mesh.vertices.Count];
-
-                    foreach (var node in mesh.vertices.Values)
-                    {
-                        nodes[node.id] = node;
-                    }
-
-                    WriteNodes(writer, nodes, behavior.UseBoundaryMarkers,
-                        nextras, behavior.Jettison);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Write the vertices to a stream.
-        /// </summary>
-        /// <param name="nodes"></param>
-        /// <param name="writer"></param>
-        private void WriteNodes(StreamWriter writer, IEnumerable<Vertex> nodes, bool markers,
-            int attribs, bool jettison)
-        {
-            int index = 0;
-
-            foreach (var vertex in nodes)
-            {
-                if (!jettison || vertex.type != VertexType.UndeadVertex)
-                {
-                    // Vertex number, x and y coordinates.
-                    writer.Write("{0} {1} {2}", index, vertex.x.ToString(nfi), vertex.y.ToString(nfi));
-
-#if USE_ATTRIBS
-                    // Write attributes.
-                    for (int j = 0; j < attribs; j++)
-                    {
-                        writer.Write(" {0}", vertex.attributes[j].ToString(nfi));
-                    }
-#endif
-
-                    if (markers)
-                    {
-                        // Write the boundary marker.
-                        writer.Write(" {0}", vertex.label);
-                    }
-
-                    writer.WriteLine();
-
-                    index++;
-                }
-            }
-        }
-
-        /// <summary>
         /// Write the triangles to an .ele file.
         /// </summary>
         /// <param name="mesh"></param>
         /// <param name="filename"></param>
         public void WriteElements(Mesh mesh, string filename)
         {
-            Otri tri = default(Otri);
+            var tri = default(Otri);
             Vertex p1, p2, p3;
-            bool regions = mesh.behavior.useRegions;
+            var regions = mesh.behavior.useRegions;
 
-            int j = 0;
+            var j = 0;
 
             tri.orient = 0;
 
             using (var writer = new StreamWriter(filename))
             {
                 // Number of triangles, vertices per triangle, attributes per triangle.
-                writer.WriteLine("{0} 3 {1}", mesh.triangles.Count, regions ? 1 : 0);
+                writer.WriteLine(format: "{0} 3 {1}", mesh.triangles.Count, regions ? 1 : 0);
 
                 foreach (var item in mesh.triangles)
                 {
@@ -164,11 +73,11 @@ namespace TriangleNet.IO
                     p3 = tri.Apex();
 
                     // Triangle number, indices for three vertices.
-                    writer.Write("{0} {1} {2} {3}", j, p1.id, p2.id, p3.id);
+                    writer.Write(format: "{0} {1} {2} {3}", j, p1.id, p2.id, p3.id);
 
                     if (regions)
                     {
-                        writer.Write(" {0}", tri.tri.label);
+                        writer.Write(format: " {0}", tri.tri.label);
                     }
 
                     writer.WriteLine();
@@ -190,36 +99,37 @@ namespace TriangleNet.IO
         /// are numbered right.</remarks>
         public void WritePoly(IPolygon polygon, string filename)
         {
-            bool hasMarkers = polygon.HasSegmentMarkers;
+            var hasMarkers = polygon.HasSegmentMarkers;
 
             using (var writer = new StreamWriter(filename))
             {
                 // TODO: write vertex attributes
 
-                writer.WriteLine("{0} 2 0 {1}", polygon.Points.Count, polygon.HasPointMarkers ? "1" : "0");
+                writer.WriteLine(format: "{0} 2 0 {1}", polygon.Points.Count, polygon.HasPointMarkers ? "1" : "0");
 
                 // Write nodes to this file.
-                WriteNodes(writer, polygon.Points, polygon.HasPointMarkers, 0, false);
+                WriteNodes(writer, polygon.Points, polygon.HasPointMarkers, attribs: 0, jettison: false);
 
                 // Number of segments, number of boundary markers (zero or one).
-                writer.WriteLine("{0} {1}", polygon.Segments.Count, hasMarkers ? "1" : "0");
+                writer.WriteLine(format: "{0} {1}", polygon.Segments.Count, hasMarkers ? "1" : "0");
 
                 Vertex p, q;
 
-                int j = 0;
+                var j = 0;
+
                 foreach (var seg in polygon.Segments)
                 {
-                    p = seg.GetVertex(0);
-                    q = seg.GetVertex(1);
+                    p = seg.GetVertex(index: 0);
+                    q = seg.GetVertex(index: 1);
 
                     // Segment number, indices of its two endpoints, and possibly a marker.
                     if (hasMarkers)
                     {
-                        writer.WriteLine("{0} {1} {2} {3}", j, p.ID, q.ID, seg.Label);
+                        writer.WriteLine(format: "{0} {1} {2} {3}", j, p.ID, q.ID, seg.Label);
                     }
                     else
                     {
-                        writer.WriteLine("{0} {1} {2}", j, p.ID, q.ID);
+                        writer.WriteLine(format: "{0} {1} {2}", j, p.ID, q.ID);
                     }
 
                     j++;
@@ -227,20 +137,22 @@ namespace TriangleNet.IO
 
                 // Holes
                 j = 0;
-                writer.WriteLine("{0}", polygon.Holes.Count);
+                writer.WriteLine(format: "{0}", polygon.Holes.Count);
+
                 foreach (var hole in polygon.Holes)
                 {
-                    writer.WriteLine("{0} {1} {2}", j++, hole.X.ToString(nfi), hole.Y.ToString(nfi));
+                    writer.WriteLine(format: "{0} {1} {2}", j++, hole.X.ToString(nfi), hole.Y.ToString(nfi));
                 }
 
                 // Regions
                 if (polygon.Regions.Count > 0)
                 {
                     j = 0;
-                    writer.WriteLine("{0}", polygon.Regions.Count);
+                    writer.WriteLine(format: "{0}", polygon.Regions.Count);
+
                     foreach (var region in polygon.Regions)
                     {
-                        writer.WriteLine("{0} {1} {2} {3}", j, region.point.X.ToString(nfi),
+                        writer.WriteLine(format: "{0} {1} {2} {3}", j, region.point.X.ToString(nfi),
                             region.point.Y.ToString(nfi), region.id);
 
                         j++;
@@ -254,10 +166,7 @@ namespace TriangleNet.IO
         /// </summary>
         /// <param name="mesh"></param>
         /// <param name="filename"></param>
-        public void WritePoly(Mesh mesh, string filename)
-        {
-            WritePoly(mesh, filename, true);
-        }
+        public void WritePoly(Mesh mesh, string filename) => WritePoly(mesh, filename, writeNodes: true);
 
         /// <summary>
         /// Write the segments and holes to a .poly file.
@@ -270,10 +179,10 @@ namespace TriangleNet.IO
         /// are numbered right.</remarks>
         public void WritePoly(Mesh mesh, string filename, bool writeNodes)
         {
-            Osub subseg = default(Osub);
+            var subseg = default(Osub);
             Vertex pt1, pt2;
 
-            bool useBoundaryMarkers = mesh.behavior.UseBoundaryMarkers;
+            var useBoundaryMarkers = mesh.behavior.UseBoundaryMarkers;
 
             using (var writer = new StreamWriter(filename))
             {
@@ -287,17 +196,18 @@ namespace TriangleNet.IO
                     // The zero indicates that the vertices are in a separate .node file.
                     // Followed by number of dimensions, number of vertex attributes,
                     // and number of boundary markers (zero or one).
-                    writer.WriteLine("0 {0} {1} {2}", mesh.mesh_dim, 0,
+                    writer.WriteLine(format: "0 {0} {1} {2}", mesh.mesh_dim, arg1: 0,
                         useBoundaryMarkers ? "1" : "0");
                 }
 
                 // Number of segments, number of boundary markers (zero or one).
-                writer.WriteLine("{0} {1}", mesh.subsegs.Count,
+                writer.WriteLine(format: "{0} {1}", mesh.subsegs.Count,
                     useBoundaryMarkers ? "1" : "0");
 
                 subseg.orient = 0;
 
-                int j = 0;
+                var j = 0;
+
                 foreach (var item in mesh.subsegs.Values)
                 {
                     subseg.seg = item;
@@ -308,11 +218,11 @@ namespace TriangleNet.IO
                     // Segment number, indices of its two endpoints, and possibly a marker.
                     if (useBoundaryMarkers)
                     {
-                        writer.WriteLine("{0} {1} {2} {3}", j, pt1.id, pt2.id, subseg.seg.boundary);
+                        writer.WriteLine(format: "{0} {1} {2} {3}", j, pt1.id, pt2.id, subseg.seg.boundary);
                     }
                     else
                     {
-                        writer.WriteLine("{0} {1} {2}", j, pt1.id, pt2.id);
+                        writer.WriteLine(format: "{0} {1} {2}", j, pt1.id, pt2.id);
                     }
 
                     j++;
@@ -320,20 +230,22 @@ namespace TriangleNet.IO
 
                 // Holes
                 j = 0;
-                writer.WriteLine("{0}", mesh.holes.Count);
+                writer.WriteLine(format: "{0}", mesh.holes.Count);
+
                 foreach (var hole in mesh.holes)
                 {
-                    writer.WriteLine("{0} {1} {2}", j++, hole.X.ToString(nfi), hole.Y.ToString(nfi));
+                    writer.WriteLine(format: "{0} {1} {2}", j++, hole.X.ToString(nfi), hole.Y.ToString(nfi));
                 }
 
                 // Regions
                 if (mesh.regions.Count > 0)
                 {
                     j = 0;
-                    writer.WriteLine("{0}", mesh.regions.Count);
+                    writer.WriteLine(format: "{0}", mesh.regions.Count);
+
                     foreach (var region in mesh.regions)
                     {
-                        writer.WriteLine("{0} {1} {2} {3}", j, region.point.X.ToString(nfi),
+                        writer.WriteLine(format: "{0} {1} {2} {3}", j, region.point.X.ToString(nfi),
                             region.point.Y.ToString(nfi), region.id);
 
                         j++;
@@ -349,18 +261,19 @@ namespace TriangleNet.IO
         /// <param name="filename"></param>
         public void WriteEdges(Mesh mesh, string filename)
         {
-            Otri tri = default(Otri), trisym = default(Otri);
-            Osub checkmark = default(Osub);
+            Otri tri = default, trisym = default;
+            var checkmark = default(Osub);
             Vertex p1, p2;
 
-            Behavior behavior = mesh.behavior;
+            var behavior = mesh.behavior;
 
             using (var writer = new StreamWriter(filename))
             {
                 // Number of edges, number of boundary markers (zero or one).
-                writer.WriteLine("{0} {1}", mesh.NumberOfEdges, behavior.UseBoundaryMarkers ? "1" : "0");
+                writer.WriteLine(format: "{0} {1}", mesh.NumberOfEdges, behavior.UseBoundaryMarkers ? "1" : "0");
 
                 long index = 0;
+
                 // To loop over the set of edges, loop over all triangles, and look at
                 // the three edges of each triangle.  If there isn't another triangle
                 // adjacent to the edge, operate on the edge.  If there is another
@@ -374,7 +287,8 @@ namespace TriangleNet.IO
                     for (tri.orient = 0; tri.orient < 3; tri.orient++)
                     {
                         tri.Sym(ref trisym);
-                        if ((tri.tri.id < trisym.tri.id) || (trisym.tri.id == Mesh.DUMMY))
+
+                        if (tri.tri.id < trisym.tri.id || trisym.tri.id == Mesh.DUMMY)
                         {
                             p1 = tri.Org();
                             p2 = tri.Dest();
@@ -389,24 +303,24 @@ namespace TriangleNet.IO
 
                                     if (checkmark.seg.hash == Mesh.DUMMY)
                                     {
-                                        writer.WriteLine("{0} {1} {2} {3}", index, p1.id, p2.id, 0);
+                                        writer.WriteLine(format: "{0} {1} {2} {3}", index, p1.id, p2.id, 0);
                                     }
                                     else
                                     {
-                                        writer.WriteLine("{0} {1} {2} {3}", index, p1.id, p2.id,
-                                                checkmark.seg.boundary);
+                                        writer.WriteLine(format: "{0} {1} {2} {3}", index, p1.id, p2.id,
+                                            checkmark.seg.boundary);
                                     }
                                 }
                                 else
                                 {
-                                    writer.WriteLine("{0} {1} {2} {3}", index, p1.id, p2.id,
-                                            trisym.tri.id == Mesh.DUMMY ? "1" : "0");
+                                    writer.WriteLine(format: "{0} {1} {2} {3}", index, p1.id, p2.id,
+                                        trisym.tri.id == Mesh.DUMMY ? "1" : "0");
                                 }
                             }
                             else
                             {
                                 // Edge number, indices of two endpoints.
-                                writer.WriteLine("{0} {1} {2}", index, p1.id, p2.id);
+                                writer.WriteLine(format: "{0} {1} {2}", index, p1.id, p2.id);
                             }
 
                             index++;
@@ -425,14 +339,14 @@ namespace TriangleNet.IO
         /// so the elements are numbered right!</remarks>
         public void WriteNeighbors(Mesh mesh, string filename)
         {
-            Otri tri = default(Otri), trisym = default(Otri);
+            Otri tri = default, trisym = default;
             int n1, n2, n3;
-            int i = 0;
+            var i = 0;
 
-            using (StreamWriter writer = new StreamWriter(filename))
+            using (var writer = new StreamWriter(filename))
             {
                 // Number of triangles, three neighbors per triangle.
-                writer.WriteLine("{0} 3", mesh.triangles.Count);
+                writer.WriteLine(format: "{0} 3", mesh.triangles.Count);
 
                 foreach (var item in mesh.triangles)
                 {
@@ -451,7 +365,98 @@ namespace TriangleNet.IO
                     n3 = trisym.tri.id;
 
                     // Triangle number, neighboring triangle numbers.
-                    writer.WriteLine("{0} {1} {2} {3}", i++, n1, n2, n3);
+                    writer.WriteLine(format: "{0} {1} {2} {3}", i++, n1, n2, n3);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Number the vertices and write them to a .node file.
+        /// </summary>
+        private void WriteNodes(StreamWriter writer, Mesh mesh)
+        {
+            var outvertices = mesh.vertices.Count;
+            var nextras = 0;
+
+            var behavior = mesh.behavior;
+
+            if (behavior.Jettison)
+            {
+                outvertices = mesh.vertices.Count - mesh.undeads;
+            }
+
+            if (writer != null)
+            {
+                // Number of vertices, number of dimensions, number of vertex attributes,
+                // and number of boundary markers (zero or one).
+                writer.WriteLine(format: "{0} {1} {2} {3}", outvertices, mesh.mesh_dim, nextras,
+                    behavior.UseBoundaryMarkers ? "1" : "0");
+
+                if (mesh.numbering == NodeNumbering.None)
+                {
+                    // If the mesh isn't numbered yet, use linear node numbering.
+                    mesh.Renumber();
+                }
+
+                if (mesh.numbering == NodeNumbering.Linear)
+                {
+                    // If numbering is linear, just use the dictionary values.
+                    WriteNodes(writer, mesh.vertices.Values, behavior.UseBoundaryMarkers,
+                        nextras, behavior.Jettison);
+                }
+                else
+                {
+                    // If numbering is not linear, a simple 'foreach' traversal of the dictionary
+                    // values doesn't reflect the actual numbering. Use an array instead.
+
+                    // TODO: Could use a custom sorting function on dictionary values instead.
+                    var nodes = new Vertex[mesh.vertices.Count];
+
+                    foreach (var node in mesh.vertices.Values)
+                    {
+                        nodes[node.id] = node;
+                    }
+
+                    WriteNodes(writer, nodes, behavior.UseBoundaryMarkers,
+                        nextras, behavior.Jettison);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Write the vertices to a stream.
+        /// </summary>
+        /// <param name="nodes"></param>
+        /// <param name="writer"></param>
+        private void WriteNodes(StreamWriter writer, IEnumerable<Vertex> nodes, bool markers,
+            int attribs, bool jettison)
+        {
+            var index = 0;
+
+            foreach (var vertex in nodes)
+            {
+                if (!jettison || vertex.type != VertexType.UndeadVertex)
+                {
+                    // Vertex number, x and y coordinates.
+                    writer.Write(format: "{0} {1} {2}", index, vertex.x.ToString(nfi), vertex.y.ToString(nfi));
+
+                    #if USE_ATTRIBS
+                    // Write attributes.
+                    for (int j = 0; j < attribs; j++)
+                    {
+                        writer.Write(" {0}", vertex.attributes[j].ToString(nfi));
+                    }
+                    #endif
+
+                    if (markers)
+                    {
+                        // Write the boundary marker.
+                        writer.Write(format: " {0}", vertex.label);
+                    }
+
+                    writer.WriteLine();
+
+                    index++;
                 }
             }
         }
